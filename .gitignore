@@ -1,0 +1,65 @@
+# ========================
+# Python & FastAPI Project
+# ========================
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Environment files
+.env
+.env.*
+!*.example  # Keep .env.example
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.bak
+
+# IDE / Editor settings
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Alembic migration cache
+alembic/versions/
+
+# Data & database files
+data/
+*.db
+*.sqlite3
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Docker related
+docker/__pycache__/
+*.pid
+
+# Jupyter / notebooks (if any)
+*.ipynb_checkpoints/
+
+# SQL dumps
+sql/*.sql
+
+# Local scripts not meant for production
+scripts/*.sh
+scripts/__pycache__/
+
+# ========================
+# End of File
+# ========================

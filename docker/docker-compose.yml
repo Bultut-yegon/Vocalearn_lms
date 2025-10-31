@@ -1,0 +1,34 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: vocalearn_db
+      MYSQL_USER: vocalearn_user
+      MYSQL_PASSWORD: your_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  vocalearn-ai:
+    build: ..
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ../models:/app/models
+
+volumes:
+  db_data:
