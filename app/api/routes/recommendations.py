@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 # from app.models.recommendations import RecommendRequest, RecommendResponse, RecommendationItem
-from app.models.recommendations import RecommendRequest, RecommendResponse, RecommendationItem
+# from app.models.recommendations import RecommendRequest, RecommendResponse, RecommendationItem
+from app.schemas.recommendations import RecommendRequest, RecommendResponse, RecommendationItem
 from app.core.config import settings
 import joblib
 import numpy as np
