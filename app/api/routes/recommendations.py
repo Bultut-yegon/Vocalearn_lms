@@ -36,7 +36,7 @@ try:
     content_map = joblib.load(os.path.join(MODEL_DIR, "content_map.joblib"))
     embedder = SentenceTransformer(EMBEDDING_MODEL_NAME)
 except Exception as e:
-    print(f"⚠️ Warning: Could not load model assets ({e}). Using dummy data for testing.")
+    print(f"Warning: Could not load model assets ({e}). Using dummy data for testing.")
 
     # Dummy content titles
     titles = [
