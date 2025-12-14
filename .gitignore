@@ -1,0 +1,578 @@
+# VocaLearn AI Services - .gitignore
+# Python FastAPI Project with AI/ML Components
+
+# ============================================================================
+# CRITICAL: Security & Credentials
+# ============================================================================
+# Never commit sensitive data!
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+config/secrets.yml
+config/credentials.yml
+
+# API Keys and Tokens
+*api_key*
+*secret_key*
+*access_token*
+groq_key.txt
+openai_key.txt
+
+# ============================================================================
+# Python
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.pytest_cache/
+cover/
+test-results/
+.pytest.ini
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff (if you add Django components)
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff (if you add Flask components)
+instance/
+.webassets-cache
+
+# Scrapy stuff (if you add web scraping)
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+docs/.doctrees/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+!notebooks/examples/*.ipynb  # Keep example notebooks
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+__pypackages__/
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff (if you add task queue)
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ============================================================================
+# AI/ML Specific
+# ============================================================================
+
+# Model files (too large for git, use Git LFS or external storage)
+*.h5
+*.hdf5
+*.pb
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.onnx
+*.tflite
+models/
+checkpoints/
+weights/
+saved_models/
+
+# Datasets (never commit large datasets)
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+*.feather
+!data/samples/*.csv  # Keep small sample files
+!data/examples/*.csv
+
+# Training outputs
+logs/
+runs/
+outputs/
+experiments/
+mlruns/
+.tensorboard/
+
+# Jupyter/Colab
+*.ipynb_checkpoints/
+
+# Hugging Face cache
+.cache/
+transformers_cache/
+huggingface/
+
+# Vector stores
+*.faiss
+*.index
+chromadb/
+qdrant_storage/
+pinecone_cache/
+
+# LLM conversation logs
+conversations/
+chat_logs/
+*.jsonl
+
+# ============================================================================
+# FastAPI / Uvicorn
+# ============================================================================
+
+# Server logs
+*.log
+logs/
+access.log
+error.log
+uvicorn.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+database/
+db_data/
+
+# Redis dumps
+dump.rdb
+appendonly.aof
+
+# ============================================================================
+# IDEs and Editors
+# ============================================================================
+
+# VS Code
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json.example
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw[a-z]
+.netrwhist
+tags
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Eclipse
+.project
+.pydevproject
+.settings/
+
+# NetBeans
+nbproject/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Atom
+.atom/
+
+# ============================================================================
+# Operating Systems
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Testing & CI/CD
+# ============================================================================
+
+# Test outputs
+test_outputs/
+test_results/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# CI/CD
+.gitlab-ci-local/
+.github/workflows/*.retry
+
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Build outputs
+docs/_build/
+docs/.doctrees/
+site/
+_build/
+_static/
+_templates/
+
+# ============================================================================
+# Temporary & Cache Files
+# ============================================================================
+
+# General temp files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+cache/
+
+# Python cache
+*.pyc
+__pycache__/
+
+# Node modules (if you have any JS tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+
+# Generated reports
+reports/
+exports/
+output/
+
+# Uploaded files (if handling file uploads)
+uploads/
+media/
+static/uploaded/
+
+# Session files
+sessions/
+*.session
+
+# Lock files
+*.lock
+
+# Backup files
+backup/
+backups/
+*.backup
+*.old
+
+# Local configuration
+config.local.yml
+settings.local.py
+local_settings.py
+
+# Docker volumes
+docker-volumes/
+.dockerignore
+
+# Kubernetes secrets
+k8s/secrets/
+
+# Postman collections (private)
+postman/private/
+
+# Migration backups
+migrations/backup/
+
+# ============================================================================
+# Package Managers
+# ============================================================================
+
+# pip
+pip-wheel-metadata/
+
+# conda
+*.conda
+.conda/
+
+# uv (if using)
+.uv/
+
+# ============================================================================
+# Monitoring & Profiling
+# ============================================================================
+
+# Profiling data
+*.prof
+*.lprof
+.prof/
+profiling/
+
+# Performance logs
+perf.data
+perf.data.old
+
+# Memory dumps
+*.hprof
+*.dump
+
+# ============================================================================
+# Cloud & Deployment
+# ============================================================================
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+
+# Cloud credentials
+.aws/
+.gcloud/
+.azure/
+
+# SSL certificates
+*.crt
+*.cert
+certificates/
+
+# ============================================================================
+# Miscellaneous
+# ============================================================================
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+!data/samples/*.zip  # Keep sample archives
+
+# Image files (unless needed for documentation)
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
+# *.bmp
+# *.ico
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.wmv
+
+# Audio files
+*.mp3
+*.wav
+*.flac
+
+# Archives of old code
+archive/
+deprecated/
+old/
+
+# TODO and scratch files
+TODO.txt
+NOTES.txt
+scratch/
+
+# ============================================================================
+# Keep These (Examples & Templates)
+# ============================================================================
+
+# Keep example/template files
+!.env.example
+!config.example.yml
+!settings.example.py
+!docker-compose.example.yml
+
+# Keep documentation assets
+!docs/images/**
+!docs/diagrams/**
+
+# Keep sample data
+!data/samples/**
+!data/examples/**
+
+# Keep test fixtures
+!tests/fixtures/**
+!tests/data/**
+
+# ============================================================================
+# END OF .gitignore
+# ============================================================================
+
+# Pro tip: Use 'git check-ignore -v <filename>' to debug why files are ignored
+# Pro tip: Use 'git clean -fdx' to remove all ignored files (CAREFUL!)
+# Pro tip: Keep this file organized and commented for team collaboration
