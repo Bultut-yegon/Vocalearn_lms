@@ -33,13 +33,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Alembic migration cache
-alembic/versions/
-
-# Data & database files
-data/
-*.db
-*.sqlite3
 
 # Build artifacts
 build/
@@ -53,8 +46,6 @@ docker/__pycache__/
 # Jupyter / notebooks (if any)
 *.ipynb_checkpoints/
 
-# SQL dumps
-sql/*.sql
 
 # Local scripts not meant for production
 scripts/*.sh
