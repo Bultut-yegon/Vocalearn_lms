@@ -6,7 +6,7 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Features](#-features)
 - [Architecture](#-architecture)
@@ -24,16 +24,16 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🎯 AI-Powered Recommendation System
+###  AI-Powered Recommendation System
 - **Personalized Learning Paths**: Analyzes student performance to create tailored study plans
 - **Performance Trend Analysis**: Detects improving, declining, or stable performance patterns
 - **Intelligent Prioritization**: Creates 3-tier study plans (urgent review, skill building, advancement)
 - **Progress Tracking**: Monitors improvement over time with detailed comparisons
 - **Motivational Insights**: Generates encouraging, context-aware feedback using LLM
 
-### 📝 Auto-Grading System
+###  Auto-Grading System
 - **Dual Grading Modes**: 
   - Fast deterministic grading for MCQs and True/False questions
   - AI-powered evaluation for open-ended responses (essays, short answers, practical scenarios)
@@ -43,7 +43,7 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 - **Topic Mastery Analysis**: Identifies specific knowledge gaps
 - **Batch Processing**: Grade entire class submissions efficiently
 
-### 🎲 Quiz Generation System
+###  Quiz Generation System
 - **One-Click Generation**: Create assessments instantly with sensible defaults
 - **Adaptive Quizzes**: Personalized questions based on student performance
 - **Multiple Question Types**: MCQ, True/False, Short Answer, Essay, Practical scenarios
@@ -54,7 +54,7 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -83,7 +83,7 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ---
 
-## 🔧 Prerequisites
+##  Prerequisites
 
 Before you begin, ensure you have the following installed:
 
@@ -99,7 +99,7 @@ Before you begin, ensure you have the following installed:
 
 ---
 
-## 📦 Installation
+##  Installation
 
 ### Step 1: Clone the Repository
 
@@ -133,7 +133,7 @@ pip install -r requirements.txt
 
 ---
 
-## ⚙️ Configuration
+##  Configuration
 
 ### Step 1: Create Environment File
 
@@ -175,7 +175,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 
 ---
 
-## 🚀 Running the Application
+##  Running the Application
 
 ### Start the Server
 
@@ -222,7 +222,7 @@ Expected response:
 
 ---
 
-## 📚 API Documentation
+##  API Documentation
 
 ### Base URL
 ```
@@ -380,7 +380,7 @@ Content-Type: application/json
 
 ---
 
-## 💡 Usage Examples
+##  Usage Examples
 
 ### Example 1: Complete Learning Cycle
 
@@ -443,7 +443,7 @@ curl -X POST http://localhost:8000/api/recommendation/track-improvement \
 
 ---
 
-## 🔗 Integration Guide
+##  Integration Guide
 
 ### Spring Boot Integration
 
@@ -587,7 +587,7 @@ public class StudentController {
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 ### Manual Testing with cURL
 
@@ -651,7 +651,7 @@ curl http://localhost:8000/api/quiz/health
 
 ---
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues and Solutions
 
@@ -792,7 +792,7 @@ If you encounter issues not covered here:
 
 ---
 
-## 📊 Performance Metrics
+##  Performance Metrics
 
 ### Expected Response Times
 
@@ -812,7 +812,7 @@ If you encounter issues not covered here:
 
 ---
 
-## 🔒 Security Considerations
+##   Security Considerations
 
 ### Production Deployment
 
@@ -849,7 +849,7 @@ If you encounter issues not covered here:
 
 ---
 
-## 🚢 Deployment
+##  Deployment
 
 ### Docker Deployment
 
@@ -883,7 +883,7 @@ docker run -d -p 8000:8000 --env-file .env vocalearn-ai
 
 ---
 
-## 📈 Monitoring
+## Monitoring
 
 ### Key Metrics to Track
 
@@ -902,7 +902,7 @@ docker run -d -p 8000:8000 --env-file .env vocalearn-ai
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how you can help:
 
@@ -923,13 +923,13 @@ We welcome contributions! Here's how you can help:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 👥 Authors
+##  Authors
 
 **VocaLearn Development Team**
 - Backend AI Services: Brian Yegon
@@ -937,7 +937,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Groq** for providing fast LLM inference
 - **FastAPI** for the excellent web framework
@@ -947,7 +947,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 Support
+## Support
 
 - **Email**: support@vocallearn.edu
 - **Documentation**: [https://docs.vocallearn.edu](https://docs.vocallearn.edu)
@@ -956,7 +956,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 ### Q1 2025
 - [ ] Multi-language support
@@ -978,6 +978,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ for TVET Education**
+**Made with Love for TVET Education**
 
 *Empowering trades education through intelligent automation*
