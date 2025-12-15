@@ -1,0 +1,144 @@
+version: '3.8'
+
+# ============================================================================
+# VocaLearn AI Services - Docker Compose Configuration
+
+
+services:
+
+  # FastAPI Application Service
+
+  vocalearn-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vocalearn-ai-service
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-llama-3.1-8b-instant}
+      - ENV=${ENV:-production}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - PORT=8000
+      - WORKERS=4
+    
+    # Port mapping
+    ports:
+      - "8000:8000"
+    
+    # Volume mounts
+    volumes:
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount cache directory
+      - ./cache:/app/cache
+      # Development: Uncomment to enable hot reload
+      # - ./app:/app/app
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Networking
+    networks:
+      - vocalearn-network
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  
+  # Redis Cache ( for caching LLM responses)
+  
+  redis:
+    image: redis:7-alpine
+    container_name: vocalearn-redis
+    restart: unless-stopped
+    
+    ports:
+      - "6379:6379"
+    
+    volumes:
+      - redis-data:/data
+    
+    networks:
+      - vocalearn-network
+    
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  
+  # Nginx Reverse Proxy ( for production)
+  
+  nginx:
+    image: nginx:alpine
+    container_name: vocalearn-nginx
+    restart: unless-stopped
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./logs/nginx:/var/log/nginx
+      # Uncomment for SSL
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
+    
+    depends_on:
+      - vocalearn-ai
+    
+    networks:
+      - vocalearn-network
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
+
+# Networks
+
+networks:
+  vocalearn-network:
+    driver: bridge
+    name: vocalearn-network
+
+
+# Volumes
+
+  redis-data:
+    driver: local
+    name: vocalearn-redis-data
