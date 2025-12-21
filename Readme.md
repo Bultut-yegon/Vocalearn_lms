@@ -189,6 +189,13 @@ python -m uvicorn app.main:app --reload --port 8000
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
+### Important: Create log directories first
+```bash
+mkdir -p logs cache
+chmod 777 logs cache
+docker-compose up -d
+```
+
 ### Verify Server is Running
 
 You should see output like:
