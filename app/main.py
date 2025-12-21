@@ -86,8 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(recommendation_router, prefix="/api/recommendation", tags=["Recommendation"])
     app.include_router(grading_router, prefix="/api/autograde", tags=["Auto-Grading"])
     app.include_router(quiz_router, prefix="/api/quiz", tags=["Quiz Generator"])
-    # app.include_router(quiz_router, prefix="/api/quiz", tags=["Quiz Generator"])
-    # app.include_router(autograde_router, prefix="/api/autograde", tags=["Auto-Grading"])
+    
 
 
     # Health Check

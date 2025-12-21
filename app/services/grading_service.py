@@ -246,13 +246,13 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
         
         prompt = f"""Generate brief, encouraging feedback for a TVET student:
 
-Topic: {topic}
-Overall Score: {percentage:.1f}%
-Questions: {total_questions}
-Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
-Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
+        Topic: {topic}
+        Overall Score: {percentage:.1f}%
+        Questions: {total_questions}
+        Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
+        Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
 
-Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
+        Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
