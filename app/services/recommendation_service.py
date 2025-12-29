@@ -1142,6 +1142,8 @@ from app.core.logging_config import logger
 from datetime import datetime
 import json
 from typing import Optional
+from app.services.document_service import DocumentProcessingService
+
 
 class RecommendationService:
     """
@@ -1155,6 +1157,7 @@ class RecommendationService:
         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")  # Fast & free on Groq
         self.weak_threshold = 0.6  # Below 60% = needs improvement
         self.strong_threshold = 0.8  # Above 80% = strength
+        self.doc_service = DocumentProcessingService()
         
     def calculate_performance_metrics(
         self, 
@@ -1510,8 +1513,44 @@ Separate the two parts with a blank line."""
     
         return report
 
-
-    # Add these methods to your RecommendationService class
+    async def generate_recommendations_with_documents(self,student_id: str,performance_history: List[Dict],topic_scores: Dict[str, float],course: str) -> Dict:
+        """
+        Generate recommendations with document-specific study suggestions.
+        """
+    
+        # Generate base recommendations (existing logic)
+        base_recommendations = await self.generate_recommendations(performance_history, topic_scores)
+    
+        # Identify weak topics
+        topic_averages = self.calculate_performance_metrics(performance_history)
+        weaknesses = [
+            topic for topic, score in topic_averages.items()
+            if score < self.weak_threshold
+        ]
+    
+    # Get document references for weak topics
+        study_materials = []
+        for weak_topic in weaknesses[:3]:  # Top 3 weak areas
+            relevant_docs = self.doc_service.retrieve_relevant_content(
+                query=weak_topic,
+                filters={"course": course},
+                top_k=2
+            )
+        
+            for doc in relevant_docs:
+                study_materials.append({
+                    "topic": weak_topic,
+                    "document_id": doc["metadata"]["document_id"],
+                    "week": doc["metadata"].get("week"),
+                    "section": doc["content"][:200] + "...",
+                    "relevance": f"Review this for {weak_topic}"
+                })
+    
+        # Enhance recommendations
+        base_recommendations["study_materials"] = study_materials
+        base_recommendations["document_references"] = len(study_materials)
+    
+        return base_recommendations
 
 
 

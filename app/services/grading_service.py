@@ -5,6 +5,7 @@ import re
 from typing import List, Dict, Tuple
 from datetime import datetime
 from app.core.logging_config import logger
+from app.services.document_service import DocumentProcessingService
 
 class GradingService:
     """
@@ -16,6 +17,7 @@ class GradingService:
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        self.doc_service = DocumentProcessingService()
         
         # Grading scale
         self.grade_scale = {
@@ -332,3 +334,156 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
             "topic_mastery": topic_mastery,
             "graded_at": datetime.now().isoformat()
         }
+
+
+    async def grade_with_document_context(self,submission_id: str,student_id: str,topic: str,course: str,closed_ended_questions: List[Dict],open_ended_questions: List[Dict]) -> Dict: 
+        """
+        Grade with document context for more accurate evaluation.
+        References actual course materials in feedback.
+        """
+    
+    # Get relevant document content for this topic
+        doc_context = self.doc_service.retrieve_relevant_content(
+            query=topic,
+            filters={"course": course},
+            top_k=3
+        )
+    
+        # Build context string
+        context_text = "\n\n".join([chunk["content"] for chunk in doc_context])
+    
+        # Grade questions (existing logic)
+        question_results = []
+        
+        for question in closed_ended_questions:
+            result = self.grade_closed_ended(question)
+            question_results.append(result)
+    
+        for question in open_ended_questions:
+            # Enhanced: Pass document context to grading
+            result = await self.grade_open_ended_with_context(
+                question, context_text
+            )
+            question_results.append(result)
+    
+        # Calculate totals
+        total_awarded = sum(r["awarded_points"] for r in question_results)
+        total_max = sum(r["max_points"] for r in question_results)
+        percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
+    
+        # Generate feedback with document references
+        overall_feedback = await self.generate_contextual_feedback(
+        student_id, topic, percentage, question_results, doc_context
+        )
+    
+        topic_mastery = self.analyze_topic_mastery(question_results, topic)
+    
+        return {
+        "submission_id": submission_id,
+        "student_id": student_id,
+        "topic": topic,
+        "course": course,
+        "total_points": round(total_awarded, 2),
+        "max_points": total_max,
+        "percentage": round(percentage, 2),
+        "grade_letter": self.calculate_letter_grade(percentage),
+        "question_results": question_results,
+        "overall_feedback": overall_feedback,
+        "topic_mastery": topic_mastery,
+        "document_references": [
+            {
+                "document_id": chunk["metadata"]["document_id"],
+                "relevance": "Referenced in grading"
+            }
+            for chunk in doc_context[:2]
+        ],
+        "graded_at": datetime.now().isoformat()
+        }
+
+    async def grade_open_ended_with_context(self, question: Dict, context: str) -> Dict:
+        """Grade open-ended with document context."""
+    
+        system_prompt = """You are grading a student answer with access to course materials.
+            Use the provided document context to evaluate accuracy."""
+
+        user_prompt = f"""COURSE MATERIAL:
+        {context[:2000]}
+
+        QUESTION: {question['question_text']}
+        RUBRIC: {question['rubric']}
+        STUDENT ANSWER: {question['student_answer']}
+
+        Grade the answer (0-100) considering if it aligns with the course material.
+        Return JSON: {{"score_percentage": 0-100, "strengths": [], "improvements": [], "feedback": "..."}}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                response = await client.post(
+                self.groq_url,
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 500
+                }
+                )
+            
+                if response.status_code == 200:
+                    result = response.json()
+                    llm_output = result["choices"][0]["message"]["content"]
+                    grading_data = self._parse_llm_grading(llm_output)
+                
+                    score_percentage = grading_data["score_percentage"]
+                    awarded_points = (score_percentage / 100) * question["points"]
+                
+                    return {
+                    "question_id": question["question_id"],
+                    "question_type": question["question_type"],
+                    "max_points": question["points"],
+                    "awarded_points": round(awarded_points, 2),
+                    "is_correct": None,
+                    "feedback": grading_data["feedback"],
+                    "strengths": grading_data["strengths"],
+                    "improvements": grading_data["improvements"],
+                    "document_aligned": True
+                    }
+        except Exception as e:
+            logger.error(f"Context-aware grading failed: {e}")
+            return self._fallback_keyword_grading(question)
+
+    async def generate_contextual_feedback(self,student_id: str,topic: str,percentage: float,question_results: List[Dict],doc_context: List[Dict]) -> str:
+        """Generate feedback with document page references."""
+    
+        # Extract weak areas
+        weak_questions = [
+            r for r in question_results 
+            if (r["awarded_points"] / r["max_points"]) < 0.7
+        ]
+    
+        # Build feedback with document references
+        feedback_parts = []
+    
+        if percentage >= 80:
+            feedback_parts.append(f"Excellent work on {topic}!")
+        elif percentage >= 60:
+            feedback_parts.append(f"Good effort on {topic}.")
+        else:
+            feedback_parts.append(f"You're making progress on {topic}.")
+    
+        # Add document-specific suggestions
+        if weak_questions and doc_context:
+            doc_ref = doc_context[0]["metadata"]
+            feedback_parts.append(
+            f"Review the materials from Week {doc_ref.get('week', 'N/A')} "
+            f"covering {doc_ref.get('topic', topic)}."
+            )
+    
+        return " ".join(feedback_parts)
+

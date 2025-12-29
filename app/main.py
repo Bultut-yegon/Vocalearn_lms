@@ -27,7 +27,7 @@ from app.core.error_handler import unhandled_exception_handler
 from app.api.v1.recommendation_router import router as recommendation_router
 from app.api.v1.grading_router import router as grading_router
 from app.api.v1.quiz_router import router as quiz_router
-
+from app.api.v1.document_router import router as document_router
 # from app.api.v1.quiz_router import router as quiz_router
 # from app.api.v1.grading_router import router as autograde_router
 
@@ -86,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(recommendation_router, prefix="/api/recommendation", tags=["Recommendation"])
     app.include_router(grading_router, prefix="/api/autograde", tags=["Auto-Grading"])
     app.include_router(quiz_router, prefix="/api/quiz", tags=["Quiz Generator"])
+    app.include_router(document_router, prefix="/api/documents", tags=["Documents"])
     
 
 
