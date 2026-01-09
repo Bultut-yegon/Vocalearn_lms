@@ -20,33 +20,101 @@ quiz_service = DocumentAwareQuizService()
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# @router.post(
+#     "/upload",
+#     response_model=DocumentUploadResponse,
+#     summary="Upload course document (PDF)",
+#     description="Upload PDF document for quiz generation and grading"
+# )
+# async def upload_document(
+#     file: UploadFile = File(...),
+#     course: str = Form(...),
+#     topic: str = Form(...),
+#     week: Optional[int] = Form(None),
+#     instructor: Optional[str] = Form(None),
+#     description: Optional[str] = Form(None)
+# ):
+#     """
+#     Upload a PDF document for processing.
+    
+#     The document will be:
+#     1. Text extracted
+#     2. Chunked for efficient retrieval
+#     3. Embedded and stored in vector database
+#     4. Available for quiz generation
+#     """
+#     try:
+#         # Validate file type
+#         if not file.filename.endswith('.pdf'):
+#             raise HTTPException(400, "Only PDF files are supported")
+        
+#         # Save uploaded file
+#         file_path = UPLOAD_DIR / f"{course}_{topic}_{file.filename}"
+        
+#         with open(file_path, "wb") as buffer:
+#             shutil.copyfileobj(file.file, buffer)
+        
+#         logger.info(f"Saved file: {file_path}")
+        
+#         # Process document
+#         metadata = {
+#             "course": course,
+#             "topic": topic,
+#             "week": week,
+#             "instructor": instructor,
+#             "description": description,
+#             "upload_date": str(Path(file_path).stat().st_mtime)
+#         }
+        
+#         result = await doc_service.process_pdf(str(file_path), metadata)
+        
+#         logger.info(f"Successfully processed document: {result['document_id']}")
+        
+#         return DocumentUploadResponse(**result)
+        
+#     except Exception as e:
+#         logger.error(f"Document upload failed: {e}")
+#         raise HTTPException(500, f"Failed to process document: {str(e)}")
+
 @router.post(
     "/upload",
     response_model=DocumentUploadResponse,
-    summary="Upload course document (PDF)",
-    description="Upload PDF document for quiz generation and grading"
+    summary="Upload course document",
+    description="Upload PDF, Word, PowerPoint, or Text document for quiz generation"
 )
-async def upload_document(
-    file: UploadFile = File(...),
+async def upload_document(file: UploadFile = File(...),
     course: str = Form(...),
     topic: str = Form(...),
     week: Optional[int] = Form(None),
     instructor: Optional[str] = Form(None),
     description: Optional[str] = Form(None)
-):
+    ):
     """
-    Upload a PDF document for processing.
+    Upload a document for processing.
+    
+    Supported formats:
+    - PDF (.pdf)
+    - Word (.docx, .doc)
+    - PowerPoint (.pptx, .ppt)
+    - Text (.txt, .md)
     
     The document will be:
     1. Text extracted
     2. Chunked for efficient retrieval
     3. Embedded and stored in vector database
-    4. Available for quiz generation
+    4. Available for quiz generation and grading
     """
     try:
+        # Get file extension
+        file_ext = Path(file.filename).suffix.lower()
+        
         # Validate file type
-        if not file.filename.endswith('.pdf'):
-            raise HTTPException(400, "Only PDF files are supported")
+        supported = ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.md']
+        if file_ext not in supported:
+            raise HTTPException(
+                400, 
+                f"Unsupported file type: {file_ext}. Supported: {', '.join(supported)}"
+            )
         
         # Save uploaded file
         file_path = UPLOAD_DIR / f"{course}_{topic}_{file.filename}"
@@ -56,26 +124,27 @@ async def upload_document(
         
         logger.info(f"Saved file: {file_path}")
         
-        # Process document
+        # Process document (now handles multiple formats)
         metadata = {
             "course": course,
             "topic": topic,
             "week": week,
             "instructor": instructor,
             "description": description,
-            "upload_date": str(Path(file_path).stat().st_mtime)
+            "upload_date": datetime.now().isoformat()
         }
         
-        result = await doc_service.process_pdf(str(file_path), metadata)
+        result = await doc_service.process_document(str(file_path), metadata)
         
         logger.info(f"Successfully processed document: {result['document_id']}")
         
         return DocumentUploadResponse(**result)
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Document upload failed: {e}")
         raise HTTPException(500, f"Failed to process document: {str(e)}")
-
 @router.post(
     "/search",
     summary="Search documents",
@@ -142,11 +211,7 @@ async def generate_document_based_quiz(request: DocumentBasedQuizRequest):
         logger.error(f"Document-based quiz generation failed: {e}")
         raise HTTPException(500, f"Quiz generation failed: {str(e)}")
 
-@router.get(
-    "/list",
-    summary="List uploaded documents",
-    description="Get list of all processed documents"
-)
+@router.get("/list",summary="List uploaded documents",description="Get list of all processed documents")
 async def list_documents(course: Optional[str] = None):
     """List all uploaded documents, optionally filtered by course."""
     try:

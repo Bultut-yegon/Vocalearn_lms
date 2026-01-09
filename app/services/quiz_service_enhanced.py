@@ -17,8 +17,7 @@ class DocumentAwareQuizService:
     """
     Enhanced quiz generation that reads from uploaded documents.
     Creates contextual quizzes based on actual course materials.
-    """
-    
+    """  
     def __init__(self):
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
@@ -27,10 +26,7 @@ class DocumentAwareQuizService:
         # Initialize document service
         self.doc_service = DocumentProcessingService()
     
-    async def generate_quiz_from_documents(
-        self,
-        course: str,
-        topic: str,
+    async def generate_quiz_from_documents(self,course: str,topic: str,
         timeframe: str = "weekly",  # "daily", "weekly", "custom"
         difficulty: str = "intermediate",
         num_mcq: int = 5,
@@ -128,12 +124,7 @@ class DocumentAwareQuizService:
             }
         }
     
-    def _get_content_from_timeframe(
-        self,
-        course: str,
-        topic: str,
-        timeframe: str
-    ) -> List[Dict]:
+    def _get_content_from_timeframe(self,course: str,topic: str,timeframe: str) -> List[Dict]:
         """Retrieve document content from timeframe."""
         
         # Get documents from specified timeframe
@@ -148,11 +139,7 @@ class DocumentAwareQuizService:
         
         return relevant_content
     
-    def _get_content_from_documents(
-        self,
-        document_ids: List[str],
-        topic: str
-    ) -> List[Dict]:
+    def _get_content_from_documents(self,document_ids: List[str],topic: str) -> List[Dict]:
         """Get content from specific documents."""
         
         all_content = []
@@ -207,13 +194,7 @@ class DocumentAwareQuizService:
         
         return references
     
-    async def _generate_context_mcq(
-        self,
-        topic: str,
-        context: str,
-        count: int,
-        difficulty: str
-    ) -> List[Dict]:
+    async def _generate_context_mcq(self,topic: str,context: str,count: int,difficulty: str) -> List[Dict]:
         """Generate MCQ questions based on document content."""
         
         system_prompt = """You are a TVET instructor creating quiz questions based on course materials.
@@ -286,17 +267,11 @@ Return JSON array of {count} questions. Each question must be directly answerabl
             logger.error(f"Context MCQ generation failed: {e}")
             return []
     
-    async def _generate_context_tf(
-        self,
-        topic: str,
-        context: str,
-        count: int,
-        difficulty: str
-    ) -> List[Dict]:
+    async def _generate_context_tf(self,topic: str,context: str,count: int,difficulty: str) -> List[Dict]:
         """Generate T/F questions from document content."""
         
         system_prompt = """Create true/false questions based strictly on the provided course material.
-Each statement should be verifiable from the document content."""
+        Each statement should be verifiable from the document content."""
 
         user_prompt = f"""Based on this content about {topic}:
 
@@ -336,17 +311,11 @@ Return JSON: [{{"question_text": "...", "correct_answer": true/false, "explanati
             logger.error(f"Context T/F generation failed: {e}")
             return []
     
-    async def _generate_context_short_answer(
-        self,
-        topic: str,
-        context: str,
-        count: int,
-        difficulty: str
-    ) -> List[Dict]:
+    async def _generate_context_short_answer(self,topic: str,context: str,count: int,difficulty: str) -> List[Dict]:
         """Generate short answer questions from documents."""
         
         system_prompt = """Create short answer questions that require students to explain concepts from the course material.
-Include detailed rubrics based on the document content."""
+        Include detailed rubrics based on the document content."""
 
         user_prompt = f"""Based on this material about {topic}:
 
