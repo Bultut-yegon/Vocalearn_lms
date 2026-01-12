@@ -1,263 +1,214 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from typing import Optional
-import os
-import shutil
-from pathlib import Path
-from app.models.document_models import (
-    DocumentUploadResponse,
-    DocumentSearchRequest,
-    DocumentBasedQuizRequest
-)
-from app.services.document_service import DocumentProcessingService
-from app.services.quiz_service_enhanced import DocumentAwareQuizService
-from app.core.logging_config import logger
-
-router = APIRouter()
-doc_service = DocumentProcessingService()
-quiz_service = DocumentAwareQuizService()
-
-# Create uploads directory
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
-
-# @router.post(
-#     "/upload",
-#     response_model=DocumentUploadResponse,
-#     summary="Upload course document (PDF)",
-#     description="Upload PDF document for quiz generation and grading"
+# from fastapi import APIRouter, HTTPException, status
+# from fastapi.responses import JSONResponse
+# from typing import Dict, List
+# from app.services.quiz_generation_service import (
+#     QuizGenerationService,
+#     QuizGenerationRequest,
+#     NotesInput,
+#     SubTopic,
+#     Quiz
 # )
-# async def upload_document(
-#     file: UploadFile = File(...),
-#     course: str = Form(...),
-#     topic: str = Form(...),
-#     week: Optional[int] = Form(None),
-#     instructor: Optional[str] = Form(None),
-#     description: Optional[str] = Form(None)
-# ):
+# from app.core.logging_config import logger
+
+# router = APIRouter(
+#     prefix="/api/quiz",
+#     tags=["Quiz Generation"]
+# )
+
+# # Initialize quiz service
+# quiz_service = QuizGenerationService()
+
+
+# @router.post("/generate", response_model=Quiz, status_code=status.HTTP_201_CREATED)
+# async def generate_quiz(request: QuizGenerationRequest):
 #     """
-#     Upload a PDF document for processing.
+#     Generate a quiz from JSON notes.
     
-#     The document will be:
-#     1. Text extracted
-#     2. Chunked for efficient retrieval
-#     3. Embedded and stored in vector database
-#     4. Available for quiz generation
+#     **Request Body Example:**
+#     ```json
+#     {
+#       "notes": {
+#         "course": "Electrical Installation",
+#         "topic": "Circuit Protection",
+#         "subtopics": [
+#           {
+#             "title": "Circuit Breakers",
+#             "content": "Circuit breakers are automatic electrical switches..."
+#           },
+#           {
+#             "title": "Fuses",
+#             "content": "A fuse is a safety device consisting of a strip of wire..."
+#           }
+#         ],
+#         "metadata": {
+#           "level": "intermediate",
+#           "week": 3
+#         }
+#       },
+#       "num_questions": 10,
+#       "question_types": ["multiple_choice", "short_answer", "open_ended"],
+#       "difficulty": "medium"
+#     }
+#     ```
+    
+#     **Response:** Quiz object with generated questions
 #     """
 #     try:
-#         # Validate file type
-#         if not file.filename.endswith('.pdf'):
-#             raise HTTPException(400, "Only PDF files are supported")
+#         logger.info(f"Received quiz generation request for: {request.notes.topic}")
         
-#         # Save uploaded file
-#         file_path = UPLOAD_DIR / f"{course}_{topic}_{file.filename}"
+#         # Validate input
+#         if not request.notes.subtopics:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="Notes must contain at least one subtopic"
+#             )
         
-#         with open(file_path, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
+#         if request.num_questions < 1 or request.num_questions > 50:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="Number of questions must be between 1 and 50"
+#             )
         
-#         logger.info(f"Saved file: {file_path}")
+#         # Generate quiz
+#         quiz = await quiz_service.generate_quiz(request)
         
-#         # Process document
-#         metadata = {
-#             "course": course,
-#             "topic": topic,
-#             "week": week,
-#             "instructor": instructor,
-#             "description": description,
-#             "upload_date": str(Path(file_path).stat().st_mtime)
-#         }
+#         logger.info(f"Quiz generated successfully: {quiz.quiz_id}")
         
-#         result = await doc_service.process_pdf(str(file_path), metadata)
+#         return quiz
         
-#         logger.info(f"Successfully processed document: {result['document_id']}")
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Quiz generation error: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to generate quiz: {str(e)}"
+#         )
+
+
+# @router.post("/generate-simple")
+# async def generate_quiz_simple(
+#     course: str,
+#     topic: str,
+#     content: str,
+#     num_questions: int = 5,
+#     question_type: str = "multiple_choice"
+# ):
+#     """
+#     Simplified endpoint for quick quiz generation with single content block.
+    
+#     **Query Parameters:**
+#     - course: Course name
+#     - topic: Topic name
+#     - content: The learning content (text)
+#     - num_questions: Number of questions (default: 5)
+#     - question_type: Type of questions (default: "multiple_choice")
+    
+#     **Example:**
+#     ```
+#     POST /api/quiz/generate-simple
+#     {
+#       "course": "Carpentry",
+#       "topic": "Wood Joints",
+#       "content": "A mortise and tenon joint is one of the strongest...",
+#       "num_questions": 3,
+#       "question_type": "multiple_choice"
+#     }
+#     ```
+#     """
+#     try:
+#         # Create notes structure
+#         notes = NotesInput(
+#             course=course,
+#             topic=topic,
+#             subtopics=[
+#                 SubTopic(title=topic, content=content)
+#             ]
+#         )
         
-#         return DocumentUploadResponse(**result)
+#         # Create request
+#         request = QuizGenerationRequest(
+#             notes=notes,
+#             num_questions=num_questions,
+#             question_types=[question_type]
+#         )
+        
+#         # Generate quiz
+#         quiz = await quiz_service.generate_quiz(request)
+        
+#         return quiz
         
 #     except Exception as e:
-#         logger.error(f"Document upload failed: {e}")
-#         raise HTTPException(500, f"Failed to process document: {str(e)}")
+#         logger.error(f"Simple quiz generation error: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to generate quiz: {str(e)}"
+#         )
 
-@router.post(
-    "/upload",
-    response_model=DocumentUploadResponse,
-    summary="Upload course document",
-    description="Upload PDF, Word, PowerPoint, or Text document for quiz generation"
-)
-async def upload_document(file: UploadFile = File(...),
-    course: str = Form(...),
-    topic: str = Form(...),
-    week: Optional[int] = Form(None),
-    instructor: Optional[str] = Form(None),
-    description: Optional[str] = Form(None)
-    ):
-    """
-    Upload a document for processing.
+
+# @router.post("/preview")
+# async def preview_quiz_format(num_questions: int, question_types: List[str]):
+#     """
+#     Preview how questions will be distributed across types.
     
-    Supported formats:
-    - PDF (.pdf)
-    - Word (.docx, .doc)
-    - PowerPoint (.pptx, .ppt)
-    - Text (.txt, .md)
+#     **Example:**
+#     ```json
+#     {
+#       "num_questions": 10,
+#       "question_types": ["multiple_choice", "short_answer", "open_ended"]
+#     }
+#     ```
     
-    The document will be:
-    1. Text extracted
-    2. Chunked for efficient retrieval
-    3. Embedded and stored in vector database
-    4. Available for quiz generation and grading
-    """
-    try:
-        # Get file extension
-        file_ext = Path(file.filename).suffix.lower()
-        
-        # Validate file type
-        supported = ['.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.md']
-        if file_ext not in supported:
-            raise HTTPException(
-                400, 
-                f"Unsupported file type: {file_ext}. Supported: {', '.join(supported)}"
-            )
-        
-        # Save uploaded file
-        file_path = UPLOAD_DIR / f"{course}_{topic}_{file.filename}"
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        logger.info(f"Saved file: {file_path}")
-        
-        # Process document (now handles multiple formats)
-        metadata = {
-            "course": course,
-            "topic": topic,
-            "week": week,
-            "instructor": instructor,
-            "description": description,
-            "upload_date": datetime.now().isoformat()
-        }
-        
-        result = await doc_service.process_document(str(file_path), metadata)
-        
-        logger.info(f"Successfully processed document: {result['document_id']}")
-        
-        return DocumentUploadResponse(**result)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Document upload failed: {e}")
-        raise HTTPException(500, f"Failed to process document: {str(e)}")
-@router.post(
-    "/search",
-    summary="Search documents",
-    description="Search for relevant content in uploaded documents"
-)
-async def search_documents(request: DocumentSearchRequest):
-    """
-    Search across all uploaded documents.
-    Returns relevant chunks with metadata.
-    """
-    try:
-        filters = {}
-        if request.course:
-            filters["course"] = request.course
-        if request.topic:
-            filters["topic"] = request.topic
-        
-        results = doc_service.retrieve_relevant_content(
-            query=request.query,
-            filters=filters if filters else None,
-            top_k=request.top_k
-        )
-        
-        return {
-            "query": request.query,
-            "results_found": len(results),
-            "results": results
-        }
-        
-    except Exception as e:
-        logger.error(f"Document search failed: {e}")
-        raise HTTPException(500, f"Search failed: {str(e)}")
-
-@router.post(
-    "/generate-quiz",
-    summary="Generate quiz from documents",
-    description="Create quiz based on uploaded course materials"
-)
-async def generate_document_based_quiz(request: DocumentBasedQuizRequest):
-    """
-    Generate quiz from uploaded documents.
+#     **Response:**
+#     ```json
+#     {
+#       "total_questions": 10,
+#       "distribution": {
+#         "multiple_choice": 4,
+#         "short_answer": 3,
+#         "open_ended": 3
+#       }
+#     }
+#     ```
+#     """
+#     distribution = quiz_service._calculate_question_distribution(
+#         num_questions,
+#         question_types
+#     )
     
-    Features:
-    - Uses actual course materials
-    - Contextual questions
-    - Document references included
-    - Supports timeframes (daily/weekly)
-    """
-    try:
-        quiz = await quiz_service.generate_quiz_from_documents(
-            course=request.course,
-            topic=request.topic,
-            timeframe=request.timeframe,
-            difficulty=request.difficulty_level,
-            num_mcq=request.num_mcq,
-            num_true_false=request.num_true_false,
-            num_short_answer=request.num_short_answer,
-            document_ids=request.document_ids
-        )
-        
-        return quiz
-        
-    except Exception as e:
-        logger.error(f"Document-based quiz generation failed: {e}")
-        raise HTTPException(500, f"Quiz generation failed: {str(e)}")
+#     return {
+#         "total_questions": num_questions,
+#         "distribution": distribution,
+#         "question_types": question_types
+#     }
 
-@router.get("/list",summary="List uploaded documents",description="Get list of all processed documents")
-async def list_documents(course: Optional[str] = None):
-    """List all uploaded documents, optionally filtered by course."""
-    try:
-        if course:
-            docs = doc_service.get_documents_by_timeframe(course, "monthly")
-        else:
-            # Get all documents
-            docs = doc_service.get_documents_by_timeframe("", "monthly")
-        
-        return {
-            "total_documents": len(docs),
-            "documents": docs
-        }
-        
-    except Exception as e:
-        logger.error(f"List documents failed: {e}")
-        raise HTTPException(500, f"Failed to list documents: {str(e)}")
 
-@router.get(
-    "/{document_id}",
-    summary="Get document details",
-    description="Get information about a specific document"
-)
-async def get_document(document_id: str):
-    """Get details of a specific document."""
-    try:
-        summary = doc_service.get_document_summary(document_id)
-        return summary
-    except Exception as e:
-        logger.error(f"Get document failed: {e}")
-        raise HTTPException(404, f"Document not found: {str(e)}")
+# @router.get("/health")
+# async def health_check():
+#     """Check if quiz generation service is running"""
+#     return {
+#         "status": "healthy",
+#         "service": "quiz_generation",
+#         "model": quiz_service.model,
+#         "available_question_types": [
+#             "multiple_choice",
+#             "short_answer", 
+#             "open_ended"
+#         ]
+#     }
 
-@router.delete(
-    "/{document_id}",
-    summary="Delete document",
-    description="Remove document from system"
-)
-async def delete_document(document_id: str):
-    """Delete a document and all its chunks."""
-    try:
-        # Delete from ChromaDB
-        doc_service.collection.delete(
-            where={"document_id": document_id}
-        )
-        
-        return {"message": f"Document {document_id} deleted successfully"}
-    except Exception as e:
-        logger.error(f"Delete document failed: {e}")
-        raise HTTPException(500, f"Failed to delete: {str(e)}")
+
+# @router.post("/export/{quiz_id}")
+# async def export_quiz(quiz_id: str, format: str = "json"):
+#     """
+#     Export a generated quiz in different formats.
+    
+#     **Note:** This is a placeholder. In production, you'd store generated quizzes
+#     and retrieve them by quiz_id.
+#     """
+#     # This would typically retrieve from database
+#     return {
+#         "message": "Export functionality - integrate with your database",
+#         "quiz_id": quiz_id,
+#         "format": format
+#     }

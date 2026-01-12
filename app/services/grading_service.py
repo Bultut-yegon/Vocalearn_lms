@@ -1,11 +1,975 @@
+# import os
+# import httpx
+# import json
+# import re
+# from typing import List, Dict, Tuple
+# from datetime import datetime
+# from app.core.logging_config import logger
+# from app.services.document_service import DocumentProcessingService
+
+# class GradingService:
+#     """
+#     Advanced auto-grading service for TVET assessments.
+#     Handles both closed-ended and open-ended questions with LLM-powered evaluation.
+#     """
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQ_API_KEY")
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+#         self.doc_service = DocumentProcessingService()
+        
+#         # Grading scale
+#         self.grade_scale = {
+#             90: "A", 80: "B", 70: "C", 60: "D", 0: "F"
+#         }
+    
+#     def grade_closed_ended(self, question: Dict) -> Dict:
+#         """
+#         Grade closed-ended questions (MCQ, True/False).
+#         Fast, deterministic grading.
+#         """
+#         correct = question["correct_answer"].strip().lower()
+#         student = question["student_answer"].strip().lower()
+        
+#         is_correct = correct == student
+#         awarded_points = question["points"] if is_correct else 0
+        
+#         feedback = "Correct! Well done." if is_correct else f"Incorrect. The correct answer is: {question['correct_answer']}"
+        
+#         return {
+#             "question_id": question["question_id"],
+#             "question_type": question["question_type"],
+#             "max_points": question["points"],
+#             "awarded_points": awarded_points,
+#             "is_correct": is_correct,
+#             "feedback": feedback,
+#             "strengths": ["Accurate response"] if is_correct else None,
+#             "improvements": ["Review this concept"] if not is_correct else None
+#         }
+    
+#     async def grade_open_ended_with_llm(self, question: Dict) -> Dict:
+#         """
+#         Grade open-ended questions using LLM with rubric-based evaluation.
+#         Provides detailed feedback and partial credit.
+#         """
+        
+#         # Prepare grading prompt
+#         system_prompt = """You are an experienced TVET instructor grading student responses for wiring and plumbing courses.
+# Your task is to evaluate student answers fairly and provide constructive feedback.
+
+# GRADING GUIDELINES:
+# - Be fair but strict in technical accuracy
+# - Award partial credit for partially correct answers
+# - Consider practical application knowledge
+# - Identify both strengths and areas for improvement
+# - Provide specific, actionable feedback
+
+# OUTPUT FORMAT (JSON only, no markdown):
+# {
+#   "score_percentage": <0-100>,
+#   "strengths": ["strength1", "strength2"],
+#   "improvements": ["improvement1", "improvement2"],
+#   "feedback": "detailed feedback text"
+# }"""
+
+#         keywords_hint = ""
+#         if question.get("keywords"):
+#             keywords_hint = f"\n\nKey concepts to look for: {', '.join(question['keywords'])}"
+        
+#         context_hint = ""
+#         if question.get("context"):
+#             context_hint = f"\n\nTopic context: {question['context']}"
+        
+#         user_prompt = f"""Grade this student response:
+
+# QUESTION: {question['question_text']}
+
+# RUBRIC/EXPECTED ANSWER: {question['rubric']}{keywords_hint}{context_hint}
+
+# STUDENT ANSWER: {question['student_answer']}
+
+# Evaluate the response and return ONLY a JSON object with score_percentage (0-100), strengths (list), improvements (list), and feedback (string)."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=45.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.3,
+#                         "max_tokens": 500
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+                    
+#                     # Parse JSON from LLM response
+#                     grading_data = self._parse_llm_grading(llm_output)
+                    
+#                     # Calculate awarded points
+#                     score_percentage = grading_data["score_percentage"]
+#                     awarded_points = (score_percentage / 100) * question["points"]
+                    
+#                     return {
+#                         "question_id": question["question_id"],
+#                         "question_type": question["question_type"],
+#                         "max_points": question["points"],
+#                         "awarded_points": round(awarded_points, 2),
+#                         "is_correct": None,
+#                         "feedback": grading_data["feedback"],
+#                         "strengths": grading_data["strengths"],
+#                         "improvements": grading_data["improvements"]
+#                     }
+#                 else:
+#                     logger.error(f"Groq API error: {response.status_code}")
+#                     raise Exception(f"LLM grading failed with status {response.status_code}")
+        
+#         except Exception as e:
+#             logger.error(f"Open-ended grading failed: {e}")
+#             return self._fallback_keyword_grading(question)
+    
+#     def _parse_llm_grading(self, llm_output: str) -> Dict:
+#         """Parse and validate LLM grading output."""
+#         try:
+#             # Remove markdown code blocks if present
+#             llm_output = re.sub(r'```json\n?', '', llm_output)
+#             llm_output = re.sub(r'```\n?', '', llm_output)
+#             llm_output = llm_output.strip()
+            
+#             grading_data = json.loads(llm_output)
+            
+#             # Validate required fields
+#             if "score_percentage" not in grading_data:
+#                 raise ValueError("Missing score_percentage")
+            
+#             # Ensure score is within bounds
+#             grading_data["score_percentage"] = max(0, min(100, grading_data["score_percentage"]))
+            
+#             # Provide defaults for optional fields
+#             grading_data.setdefault("strengths", [])
+#             grading_data.setdefault("improvements", [])
+#             grading_data.setdefault("feedback", "Response evaluated.")
+            
+#             return grading_data
+            
+#         except Exception as e:
+#             logger.error(f"Failed to parse LLM output: {e}")
+#             return {
+#                 "score_percentage": 50,
+#                 "strengths": ["Attempted the question"],
+#                 "improvements": ["Provide more detail", "Include technical accuracy"],
+#                 "feedback": "Answer needs more technical detail and accuracy."
+#             }
+    
+#     def _fallback_keyword_grading(self, question: Dict) -> Dict:
+#         """
+#         Fallback grading using keyword matching when LLM fails.
+#         """
+#         student_answer = question["student_answer"].lower()
+#         keywords = question.get("keywords", [])
+        
+#         if not keywords:
+#             score_percentage = 60
+#             feedback = "Answer received but couldn't be fully evaluated. Please review the rubric."
+#         else:
+#             matches = sum(1 for keyword in keywords if keyword.lower() in student_answer)
+#             score_percentage = min(100, (matches / len(keywords)) * 100)
+#             feedback = f"Found {matches}/{len(keywords)} key concepts in your answer."
+        
+#         awarded_points = (score_percentage / 100) * question["points"]
+        
+#         return {
+#             "question_id": question["question_id"],
+#             "question_type": question["question_type"],
+#             "max_points": question["points"],
+#             "awarded_points": round(awarded_points, 2),
+#             "is_correct": None,
+#             "feedback": feedback,
+#             "strengths": ["Answered the question"] if score_percentage > 50 else None,
+#             "improvements": ["Include more key concepts", "Add technical details"]
+#         }
+    
+#     def calculate_letter_grade(self, percentage: float) -> str:
+#         """Convert percentage to letter grade."""
+#         for threshold, grade in sorted(self.grade_scale.items(), reverse=True):
+#             if percentage >= threshold:
+#                 return grade
+#         return "F"
+    
+#     def analyze_topic_mastery(self, question_results: List[Dict], topic: str) -> Dict[str, float]:
+#         """Analyze mastery of different topic areas."""
+#         topic_scores = {}
+        
+#         for result in question_results:
+#             percentage = (result["awarded_points"] / result["max_points"] * 100) if result["max_points"] > 0 else 0
+#             topic_key = topic
+#             topic_scores[topic_key] = topic_scores.get(topic_key, [])
+#             topic_scores[topic_key].append(percentage)
+        
+#         topic_mastery = {
+#             topic_name: round(sum(scores) / len(scores), 2)
+#             for topic_name, scores in topic_scores.items()
+#         }
+        
+#         return topic_mastery
+    
+#     async def generate_overall_feedback(
+#         self,
+#         student_id: str,
+#         topic: str,
+#         percentage: float,
+#         question_results: List[Dict]
+#     ) -> str:
+#         """Generate personalized overall feedback using LLM."""
+        
+#         total_questions = len(question_results)
+#         strengths = []
+#         improvements = []
+        
+#         for result in question_results:
+#             if result.get("strengths"):
+#                 strengths.extend(result["strengths"])
+#             if result.get("improvements"):
+#                 improvements.extend(result["improvements"])
+        
+#         strengths = list(set(strengths))[:5]
+#         improvements = list(set(improvements))[:5]
+        
+#         prompt = f"""Generate brief, encouraging feedback for a TVET student:
+
+#         Topic: {topic}
+#         Overall Score: {percentage:.1f}%
+#         Questions: {total_questions}
+#         Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
+#         Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
+
+#         Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": "You are an encouraging TVET instructor providing constructive feedback."},
+#                             {"role": "user", "content": prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 200
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     return result["choices"][0]["message"]["content"].strip()
+        
+#         except Exception as e:
+#             logger.error(f"Overall feedback generation failed: {e}")
+        
+#         if percentage >= 80:
+#             return f"Excellent work on {topic}! You've demonstrated strong understanding. Keep up the great effort!"
+#         elif percentage >= 60:
+#             return f"Good effort on {topic}. You're on the right track. Focus on the areas marked for improvement to reach mastery."
+#         else:
+#             return f"You're making progress on {topic}. Review the feedback carefully and practice the concepts that need work."
+    
+#     async def grade_submission(
+#         self,
+#         submission_id: str,
+#         student_id: str,
+#         topic: str,
+#         closed_ended_questions: List[Dict],
+#         open_ended_questions: List[Dict]
+#     ) -> Dict:
+#         """Main method to grade a complete submission."""
+        
+#         question_results = []
+        
+#         for question in closed_ended_questions:
+#             result = self.grade_closed_ended(question)
+#             question_results.append(result)
+#             logger.info(f"Graded closed-ended question {question['question_id']}")
+        
+#         for question in open_ended_questions:
+#             result = await self.grade_open_ended_with_llm(question)
+#             question_results.append(result)
+#             logger.info(f"Graded open-ended question {question['question_id']}")
+        
+#         total_awarded = sum(r["awarded_points"] for r in question_results)
+#         total_max = sum(r["max_points"] for r in question_results)
+#         percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
+        
+#         overall_feedback = await self.generate_overall_feedback(
+#             student_id, topic, percentage, question_results
+#         )
+        
+#         topic_mastery = self.analyze_topic_mastery(question_results, topic)
+        
+#         return {
+#             "submission_id": submission_id,
+#             "student_id": student_id,
+#             "topic": topic,
+#             "total_points": round(total_awarded, 2),
+#             "max_points": total_max,
+#             "percentage": round(percentage, 2),
+#             "grade_letter": self.calculate_letter_grade(percentage),
+#             "question_results": question_results,
+#             "overall_feedback": overall_feedback,
+#             "topic_mastery": topic_mastery,
+#             "graded_at": datetime.now().isoformat()
+#         }
+
+
+#     async def grade_with_document_context(self,submission_id: str,student_id: str,topic: str,course: str,closed_ended_questions: List[Dict],open_ended_questions: List[Dict]) -> Dict: 
+#         """
+#         Grade with document context for more accurate evaluation.
+#         References actual course materials in feedback.
+#         """
+    
+#     # Get relevant document content for this topic
+#         doc_context = self.doc_service.retrieve_relevant_content(
+#             query=topic,
+#             filters={"course": course},
+#             top_k=3
+#         )
+    
+#         # Build context string
+#         context_text = "\n\n".join([chunk["content"] for chunk in doc_context])
+    
+#         # Grade questions (existing logic)
+#         question_results = []
+        
+#         for question in closed_ended_questions:
+#             result = self.grade_closed_ended(question)
+#             question_results.append(result)
+    
+#         for question in open_ended_questions:
+#             # Enhanced: Pass document context to grading
+#             result = await self.grade_open_ended_with_context(
+#                 question, context_text
+#             )
+#             question_results.append(result)
+    
+#         # Calculate totals
+#         total_awarded = sum(r["awarded_points"] for r in question_results)
+#         total_max = sum(r["max_points"] for r in question_results)
+#         percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
+    
+#         # Generate feedback with document references
+#         overall_feedback = await self.generate_contextual_feedback(
+#         student_id, topic, percentage, question_results, doc_context
+#         )
+    
+#         topic_mastery = self.analyze_topic_mastery(question_results, topic)
+    
+#         return {
+#         "submission_id": submission_id,
+#         "student_id": student_id,
+#         "topic": topic,
+#         "course": course,
+#         "total_points": round(total_awarded, 2),
+#         "max_points": total_max,
+#         "percentage": round(percentage, 2),
+#         "grade_letter": self.calculate_letter_grade(percentage),
+#         "question_results": question_results,
+#         "overall_feedback": overall_feedback,
+#         "topic_mastery": topic_mastery,
+#         "document_references": [
+#             {
+#                 "document_id": chunk["metadata"]["document_id"],
+#                 "relevance": "Referenced in grading"
+#             }
+#             for chunk in doc_context[:2]
+#         ],
+#         "graded_at": datetime.now().isoformat()
+#         }
+
+#     async def grade_open_ended_with_context(self, question: Dict, context: str) -> Dict:
+#         """Grade open-ended with document context."""
+    
+#         system_prompt = """You are grading a student answer with access to course materials.
+#             Use the provided document context to evaluate accuracy."""
+
+#         user_prompt = f"""COURSE MATERIAL:
+#         {context[:2000]}
+
+#         QUESTION: {question['question_text']}
+#         RUBRIC: {question['rubric']}
+#         STUDENT ANSWER: {question['student_answer']}
+
+#         Grade the answer (0-100) considering if it aligns with the course material.
+#         Return JSON: {{"score_percentage": 0-100, "strengths": [], "improvements": [], "feedback": "..."}}"""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=45.0) as client:
+#                 response = await client.post(
+#                 self.groq_url,
+#                 headers={
+#                     "Authorization": f"Bearer {self.groq_api_key}",
+#                     "Content-Type": "application/json"
+#                 },
+#                 json={
+#                     "model": self.model,
+#                     "messages": [
+#                         {"role": "system", "content": system_prompt},
+#                         {"role": "user", "content": user_prompt}
+#                     ],
+#                     "temperature": 0.3,
+#                     "max_tokens": 500
+#                 }
+#                 )
+            
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+#                     grading_data = self._parse_llm_grading(llm_output)
+                
+#                     score_percentage = grading_data["score_percentage"]
+#                     awarded_points = (score_percentage / 100) * question["points"]
+                
+#                     return {
+#                     "question_id": question["question_id"],
+#                     "question_type": question["question_type"],
+#                     "max_points": question["points"],
+#                     "awarded_points": round(awarded_points, 2),
+#                     "is_correct": None,
+#                     "feedback": grading_data["feedback"],
+#                     "strengths": grading_data["strengths"],
+#                     "improvements": grading_data["improvements"],
+#                     "document_aligned": True
+#                     }
+#         except Exception as e:
+#             logger.error(f"Context-aware grading failed: {e}")
+#             return self._fallback_keyword_grading(question)
+
+#     async def generate_contextual_feedback(self,student_id: str,topic: str,percentage: float,question_results: List[Dict],doc_context: List[Dict]) -> str:
+#         """Generate feedback with document page references."""
+    
+#         # Extract weak areas
+#         weak_questions = [
+#             r for r in question_results 
+#             if (r["awarded_points"] / r["max_points"]) < 0.7
+#         ]
+    
+#         # Build feedback with document references
+#         feedback_parts = []
+    
+#         if percentage >= 80:
+#             feedback_parts.append(f"Excellent work on {topic}!")
+#         elif percentage >= 60:
+#             feedback_parts.append(f"Good effort on {topic}.")
+#         else:
+#             feedback_parts.append(f"You're making progress on {topic}.")
+    
+#         # Add document-specific suggestions
+#         if weak_questions and doc_context:
+#             doc_ref = doc_context[0]["metadata"]
+#             feedback_parts.append(
+#             f"Review the materials from Week {doc_ref.get('week', 'N/A')} "
+#             f"covering {doc_ref.get('topic', topic)}."
+#             )
+    
+#         return " ".join(feedback_parts)
+
+
+
+
+
+
+
+
+
+# VERSION 2
+
+# import os
+# import httpx
+# import json
+# import re
+# from typing import List, Dict, Tuple, Optional
+# from datetime import datetime
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+
+# # Load environment variables
+# load_dotenv()
+
+
+# class GradingService:
+#     """
+#     Advanced auto-grading service for TVET assessments.
+#     Handles both closed-ended and open-ended questions with LLM-powered evaluation.
+#     """
+    
+#     def __init__(self):
+#         # Load API key from environment
+#         self.groq_api_key = os.getenv("GROQ_API_KEY")
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not found. LLM-powered grading will not be available.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         # Grading scale
+#         self.grade_scale = {
+#             90: "A", 80: "B", 70: "C", 60: "D", 0: "F"
+#         }
+        
+#         logger.info("GradingService initialized")
+    
+#     def grade_closed_ended(self, question: Dict) -> Dict:
+#         """
+#         Grade closed-ended questions (MCQ, True/False).
+#         Fast, deterministic grading.
+#         """
+#         correct = question["correct_answer"].strip().lower()
+#         student = question["student_answer"].strip().lower()
+        
+#         is_correct = correct == student
+#         awarded_points = question["points"] if is_correct else 0
+        
+#         feedback = "Correct! Well done." if is_correct else f"Incorrect. The correct answer is: {question['correct_answer']}"
+        
+#         return {
+#             "question_id": question["question_id"],
+#             "question_type": question["question_type"],
+#             "max_points": question["points"],
+#             "awarded_points": awarded_points,
+#             "is_correct": is_correct,
+#             "feedback": feedback,
+#             "strengths": ["Accurate response"] if is_correct else None,
+#             "improvements": ["Review this concept"] if not is_correct else None
+#         }
+    
+#     async def grade_open_ended_with_llm(self, question: Dict) -> Dict:
+#         """
+#         Grade open-ended questions using LLM with rubric-based evaluation.
+#         Provides detailed feedback and partial credit.
+#         """
+        
+#         # Check if API key is available
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not available, using fallback grading")
+#             return self._fallback_keyword_grading(question)
+        
+#         # Prepare grading prompt
+#         system_prompt = """You are an experienced TVET instructor grading student responses for technical and vocational courses.
+# Your task is to evaluate student answers fairly and provide constructive feedback.
+
+# GRADING GUIDELINES:
+# - Be fair but strict in technical accuracy
+# - Award partial credit for partially correct answers
+# - Consider practical application knowledge
+# - Identify both strengths and areas for improvement
+# - Provide specific, actionable feedback
+
+# OUTPUT FORMAT (JSON only, no markdown):
+# {
+#   "score_percentage": <0-100>,
+#   "strengths": ["strength1", "strength2"],
+#   "improvements": ["improvement1", "improvement2"],
+#   "feedback": "detailed feedback text"
+# }"""
+
+#         keywords_hint = ""
+#         if question.get("keywords"):
+#             keywords_hint = f"\n\nKey concepts to look for: {', '.join(question['keywords'])}"
+        
+#         context_hint = ""
+#         if question.get("context"):
+#             context_hint = f"\n\nTopic context: {question['context']}"
+        
+#         user_prompt = f"""Grade this student response:
+
+# QUESTION: {question['question_text']}
+
+# RUBRIC/EXPECTED ANSWER: {question['rubric']}{keywords_hint}{context_hint}
+
+# STUDENT ANSWER: {question['student_answer']}
+
+# Evaluate the response and return ONLY a JSON object with score_percentage (0-100), strengths (list), improvements (list), and feedback (string)."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=45.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.3,
+#                         "max_tokens": 500
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+                    
+#                     # Parse JSON from LLM response
+#                     grading_data = self._parse_llm_grading(llm_output)
+                    
+#                     # Calculate awarded points
+#                     score_percentage = grading_data["score_percentage"]
+#                     awarded_points = (score_percentage / 100) * question["points"]
+                    
+#                     return {
+#                         "question_id": question["question_id"],
+#                         "question_type": question["question_type"],
+#                         "max_points": question["points"],
+#                         "awarded_points": round(awarded_points, 2),
+#                         "is_correct": None,
+#                         "feedback": grading_data["feedback"],
+#                         "strengths": grading_data["strengths"],
+#                         "improvements": grading_data["improvements"]
+#                     }
+#                 else:
+#                     logger.error(f"Groq API error: {response.status_code}")
+#                     raise Exception(f"LLM grading failed with status {response.status_code}")
+        
+#         except Exception as e:
+#             logger.error(f"Open-ended grading failed: {e}")
+#             return self._fallback_keyword_grading(question)
+    
+#     def _parse_llm_grading(self, llm_output: str) -> Dict:
+#         """Parse and validate LLM grading output."""
+#         try:
+#             # Remove markdown code blocks if present
+#             llm_output = re.sub(r'```json\n?', '', llm_output)
+#             llm_output = re.sub(r'```\n?', '', llm_output)
+#             llm_output = llm_output.strip()
+            
+#             grading_data = json.loads(llm_output)
+            
+#             # Validate required fields
+#             if "score_percentage" not in grading_data:
+#                 raise ValueError("Missing score_percentage")
+            
+#             # Ensure score is within bounds
+#             grading_data["score_percentage"] = max(0, min(100, grading_data["score_percentage"]))
+            
+#             # Provide defaults for optional fields
+#             grading_data.setdefault("strengths", [])
+#             grading_data.setdefault("improvements", [])
+#             grading_data.setdefault("feedback", "Response evaluated.")
+            
+#             return grading_data
+            
+#         except Exception as e:
+#             logger.error(f"Failed to parse LLM output: {e}")
+#             return {
+#                 "score_percentage": 50,
+#                 "strengths": ["Attempted the question"],
+#                 "improvements": ["Provide more detail", "Include technical accuracy"],
+#                 "feedback": "Answer needs more technical detail and accuracy."
+#             }
+    
+#     def _fallback_keyword_grading(self, question: Dict) -> Dict:
+#         """
+#         Fallback grading using keyword matching when LLM fails.
+#         """
+#         student_answer = question["student_answer"].lower()
+#         keywords = question.get("keywords", [])
+        
+#         if not keywords:
+#             score_percentage = 60
+#             feedback = "Answer received but couldn't be fully evaluated. Please review the rubric."
+#         else:
+#             matches = sum(1 for keyword in keywords if keyword.lower() in student_answer)
+#             score_percentage = min(100, (matches / len(keywords)) * 100)
+#             feedback = f"Found {matches}/{len(keywords)} key concepts in your answer."
+        
+#         awarded_points = (score_percentage / 100) * question["points"]
+        
+#         return {
+#             "question_id": question["question_id"],
+#             "question_type": question["question_type"],
+#             "max_points": question["points"],
+#             "awarded_points": round(awarded_points, 2),
+#             "is_correct": None,
+#             "feedback": feedback,
+#             "strengths": ["Answered the question"] if score_percentage > 50 else None,
+#             "improvements": ["Include more key concepts", "Add technical details"]
+#         }
+    
+#     def calculate_letter_grade(self, percentage: float) -> str:
+#         """Convert percentage to letter grade."""
+#         for threshold, grade in sorted(self.grade_scale.items(), reverse=True):
+#             if percentage >= threshold:
+#                 return grade
+#         return "F"
+    
+#     def analyze_topic_mastery(self, question_results: List[Dict], topic: str) -> Dict[str, float]:
+#         """Analyze mastery of different topic areas."""
+#         topic_scores = {}
+        
+#         for result in question_results:
+#             percentage = (result["awarded_points"] / result["max_points"] * 100) if result["max_points"] > 0 else 0
+#             topic_key = topic
+#             topic_scores[topic_key] = topic_scores.get(topic_key, [])
+#             topic_scores[topic_key].append(percentage)
+        
+#         topic_mastery = {
+#             topic_name: round(sum(scores) / len(scores), 2)
+#             for topic_name, scores in topic_scores.items()
+#         }
+        
+#         return topic_mastery
+    
+#     async def generate_overall_feedback(
+#         self,
+#         student_id: str,
+#         topic: str,
+#         percentage: float,
+#         question_results: List[Dict]
+#     ) -> str:
+#         """Generate personalized overall feedback using LLM."""
+        
+#         # Check if API key is available
+#         if not self.groq_api_key:
+#             # Use fallback feedback
+#             if percentage >= 80:
+#                 return f"Excellent work on {topic}! You've demonstrated strong understanding. Keep up the great effort!"
+#             elif percentage >= 60:
+#                 return f"Good effort on {topic}. You're on the right track. Focus on the areas marked for improvement to reach mastery."
+#             else:
+#                 return f"You're making progress on {topic}. Review the feedback carefully and practice the concepts that need work."
+        
+#         total_questions = len(question_results)
+#         strengths = []
+#         improvements = []
+        
+#         for result in question_results:
+#             if result.get("strengths"):
+#                 strengths.extend(result["strengths"])
+#             if result.get("improvements"):
+#                 improvements.extend(result["improvements"])
+        
+#         strengths = list(set(strengths))[:5]
+#         improvements = list(set(improvements))[:5]
+        
+#         prompt = f"""Generate brief, encouraging feedback for a TVET student:
+
+# Topic: {topic}
+# Overall Score: {percentage:.1f}%
+# Questions: {total_questions}
+# Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
+# Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
+
+# Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": "You are an encouraging TVET instructor providing constructive feedback."},
+#                             {"role": "user", "content": prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 200
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     return result["choices"][0]["message"]["content"].strip()
+        
+#         except Exception as e:
+#             logger.error(f"Overall feedback generation failed: {e}")
+        
+#         # Fallback feedback
+#         if percentage >= 80:
+#             return f"Excellent work on {topic}! You've demonstrated strong understanding. Keep up the great effort!"
+#         elif percentage >= 60:
+#             return f"Good effort on {topic}. You're on the right track. Focus on the areas marked for improvement to reach mastery."
+#         else:
+#             return f"You're making progress on {topic}. Review the feedback carefully and practice the concepts that need work."
+    
+#     async def grade_submission(
+#         self,
+#         submission_id: str,
+#         student_id: str,
+#         topic: str,
+#         closed_ended_questions: List[Dict],
+#         open_ended_questions: List[Dict]
+#     ) -> Dict:
+#         """
+#         Main method to grade a complete submission.
+        
+#         Args:
+#             submission_id: Unique identifier for the submission
+#             student_id: Student's ID
+#             topic: Topic being assessed
+#             closed_ended_questions: List of MCQ/True-False questions
+#             open_ended_questions: List of open-ended questions
+        
+#         Returns:
+#             Complete grading results with feedback
+#         """
+        
+#         question_results = []
+        
+#         # Grade closed-ended questions
+#         for question in closed_ended_questions:
+#             result = self.grade_closed_ended(question)
+#             question_results.append(result)
+#             logger.info(f"Graded closed-ended question {question['question_id']}")
+        
+#         # Grade open-ended questions
+#         for question in open_ended_questions:
+#             result = await self.grade_open_ended_with_llm(question)
+#             question_results.append(result)
+#             logger.info(f"Graded open-ended question {question['question_id']}")
+        
+#         # Calculate totals
+#         total_awarded = sum(r["awarded_points"] for r in question_results)
+#         total_max = sum(r["max_points"] for r in question_results)
+#         percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
+        
+#         # Generate overall feedback
+#         overall_feedback = await self.generate_overall_feedback(
+#             student_id, topic, percentage, question_results
+#         )
+        
+#         # Analyze topic mastery
+#         topic_mastery = self.analyze_topic_mastery(question_results, topic)
+        
+#         return {
+#             "submission_id": submission_id,
+#             "student_id": student_id,
+#             "topic": topic,
+#             "total_points": round(total_awarded, 2),
+#             "max_points": total_max,
+#             "percentage": round(percentage, 2),
+#             "grade_letter": self.calculate_letter_grade(percentage),
+#             "question_results": question_results,
+#             "overall_feedback": overall_feedback,
+#             "topic_mastery": topic_mastery,
+#             "graded_at": datetime.now().isoformat()
+#         }
+    
+#     async def grade_quiz_generated_by_service(
+#         self,
+#         submission_id: str,
+#         student_id: str,
+#         quiz_data: Dict,
+#         student_answers: Dict
+#     ) -> Dict:
+#         """
+#         Grade a quiz that was generated by the quiz generation service.
+        
+#         Args:
+#             submission_id: Unique submission ID
+#             student_id: Student's ID
+#             quiz_data: Quiz from quiz_generation_service (has multiple_choice, true_false, short_answer)
+#             student_answers: Dict mapping question indices to student answers
+#                             e.g., {"mcq_0": "B", "tf_1": true, "sa_2": "answer text"}
+        
+#         Returns:
+#             Complete grading results
+#         """
+        
+#         closed_ended = []
+#         open_ended = []
+        
+#         # Process multiple choice questions
+#         for idx, mcq in enumerate(quiz_data.get("multiple_choice", [])):
+#             answer_key = f"mcq_{idx}"
+#             if answer_key in student_answers:
+#                 closed_ended.append({
+#                     "question_id": answer_key,
+#                     "question_type": "multiple_choice",
+#                     "correct_answer": mcq["correct_answer"],
+#                     "student_answer": student_answers[answer_key],
+#                     "points": 1
+#                 })
+        
+#         # Process true/false questions
+#         for idx, tf in enumerate(quiz_data.get("true_false", [])):
+#             answer_key = f"tf_{idx}"
+#             if answer_key in student_answers:
+#                 closed_ended.append({
+#                     "question_id": answer_key,
+#                     "question_type": "true_false",
+#                     "correct_answer": str(tf["correct_answer"]).lower(),
+#                     "student_answer": str(student_answers[answer_key]).lower(),
+#                     "points": 1
+#                 })
+        
+#         # Process short answer (open-ended) questions
+#         for idx, sa in enumerate(quiz_data.get("short_answer", [])):
+#             answer_key = f"sa_{idx}"
+#             if answer_key in student_answers:
+#                 open_ended.append({
+#                     "question_id": answer_key,
+#                     "question_type": "short_answer",
+#                     "question_text": sa["question"],
+#                     "rubric": sa["sample_answer"],
+#                     "keywords": sa.get("key_points", []),
+#                     "student_answer": student_answers[answer_key],
+#                     "points": 2
+#                 })
+        
+#         # Grade the submission
+#         return await self.grade_submission(
+#             submission_id=submission_id,
+#             student_id=student_id,
+#             topic=quiz_data.get("topic", "General Assessment"),
+#             closed_ended_questions=closed_ended,
+#             open_ended_questions=open_ended
+#         )
+
+
+
+
+
+# VERSION 3
+
+
+
+
+
+
 import os
 import httpx
 import json
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from datetime import datetime
+from dotenv import load_dotenv
 from app.core.logging_config import logger
-from app.services.document_service import DocumentProcessingService
+
+# Load environment variables
+load_dotenv()
+
 
 class GradingService:
     """
@@ -14,15 +978,20 @@ class GradingService:
     """
     
     def __init__(self):
+        # Load API key from environment
         self.groq_api_key = os.getenv("GROQ_API_KEY")
+        if not self.groq_api_key:
+            logger.warning("GROQ_API_KEY not found. LLM-powered grading will not be available.")
+        
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
-        self.doc_service = DocumentProcessingService()
         
         # Grading scale
         self.grade_scale = {
             90: "A", 80: "B", 70: "C", 60: "D", 0: "F"
         }
+        
+        logger.info("GradingService initialized")
     
     def grade_closed_ended(self, question: Dict) -> Dict:
         """
@@ -35,6 +1004,9 @@ class GradingService:
         is_correct = correct == student
         awarded_points = question["points"] if is_correct else 0
         
+        # Get question text if available
+        question_text = question.get("question_text", "Question")
+        
         feedback = "Correct! Well done." if is_correct else f"Incorrect. The correct answer is: {question['correct_answer']}"
         
         return {
@@ -45,7 +1017,7 @@ class GradingService:
             "is_correct": is_correct,
             "feedback": feedback,
             "strengths": ["Accurate response"] if is_correct else None,
-            "improvements": ["Review this concept"] if not is_correct else None
+            "improvements": [f"Review: {question_text}"] if not is_correct else None
         }
     
     async def grade_open_ended_with_llm(self, question: Dict) -> Dict:
@@ -54,8 +1026,13 @@ class GradingService:
         Provides detailed feedback and partial credit.
         """
         
+        # Check if API key is available
+        if not self.groq_api_key:
+            logger.warning("GROQ_API_KEY not available, using fallback grading")
+            return self._fallback_keyword_grading(question)
+        
         # Prepare grading prompt
-        system_prompt = """You are an experienced TVET instructor grading student responses for wiring and plumbing courses.
+        system_prompt = """You are an experienced TVET instructor grading student responses for technical and vocational courses.
 Your task is to evaluate student answers fairly and provide constructive feedback.
 
 GRADING GUIDELINES:
@@ -233,6 +1210,16 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
     ) -> str:
         """Generate personalized overall feedback using LLM."""
         
+        # Check if API key is available
+        if not self.groq_api_key:
+            # Use fallback feedback
+            if percentage >= 80:
+                return f"Excellent work on {topic}! You've demonstrated strong understanding. Keep up the great effort!"
+            elif percentage >= 60:
+                return f"Good effort on {topic}. You're on the right track. Focus on the areas marked for improvement to reach mastery."
+            else:
+                return f"You're making progress on {topic}. Review the feedback carefully and practice the concepts that need work."
+        
         total_questions = len(question_results)
         strengths = []
         improvements = []
@@ -248,13 +1235,13 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
         
         prompt = f"""Generate brief, encouraging feedback for a TVET student:
 
-        Topic: {topic}
-        Overall Score: {percentage:.1f}%
-        Questions: {total_questions}
-        Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
-        Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
+Topic: {topic}
+Overall Score: {percentage:.1f}%
+Questions: {total_questions}
+Key Strengths: {', '.join(strengths) if strengths else 'Basic understanding shown'}
+Areas to Improve: {', '.join(improvements) if improvements else 'Continue practicing'}
 
-        Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
+Provide 2-3 sentences of constructive feedback that's specific and encouraging."""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -282,6 +1269,7 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
         except Exception as e:
             logger.error(f"Overall feedback generation failed: {e}")
         
+        # Fallback feedback
         if percentage >= 80:
             return f"Excellent work on {topic}! You've demonstrated strong understanding. Keep up the great effort!"
         elif percentage >= 60:
@@ -297,28 +1285,45 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
         closed_ended_questions: List[Dict],
         open_ended_questions: List[Dict]
     ) -> Dict:
-        """Main method to grade a complete submission."""
+        """
+        Main method to grade a complete submission.
+        
+        Args:
+            submission_id: Unique identifier for the submission
+            student_id: Student's ID
+            topic: Topic being assessed
+            closed_ended_questions: List of MCQ/True-False questions
+            open_ended_questions: List of open-ended questions
+        
+        Returns:
+            Complete grading results with feedback
+        """
         
         question_results = []
         
+        # Grade closed-ended questions
         for question in closed_ended_questions:
             result = self.grade_closed_ended(question)
             question_results.append(result)
             logger.info(f"Graded closed-ended question {question['question_id']}")
         
+        # Grade open-ended questions
         for question in open_ended_questions:
             result = await self.grade_open_ended_with_llm(question)
             question_results.append(result)
             logger.info(f"Graded open-ended question {question['question_id']}")
         
+        # Calculate totals
         total_awarded = sum(r["awarded_points"] for r in question_results)
         total_max = sum(r["max_points"] for r in question_results)
         percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
         
+        # Generate overall feedback
         overall_feedback = await self.generate_overall_feedback(
             student_id, topic, percentage, question_results
         )
         
+        # Analyze topic mastery
         topic_mastery = self.analyze_topic_mastery(question_results, topic)
         
         return {
@@ -334,156 +1339,76 @@ Evaluate the response and return ONLY a JSON object with score_percentage (0-100
             "topic_mastery": topic_mastery,
             "graded_at": datetime.now().isoformat()
         }
-
-
-    async def grade_with_document_context(self,submission_id: str,student_id: str,topic: str,course: str,closed_ended_questions: List[Dict],open_ended_questions: List[Dict]) -> Dict: 
+    
+    async def grade_quiz_generated_by_service(
+        self,
+        submission_id: str,
+        student_id: str,
+        quiz_data: Dict,
+        student_answers: Dict
+    ) -> Dict:
         """
-        Grade with document context for more accurate evaluation.
-        References actual course materials in feedback.
-        """
-    
-    # Get relevant document content for this topic
-        doc_context = self.doc_service.retrieve_relevant_content(
-            query=topic,
-            filters={"course": course},
-            top_k=3
-        )
-    
-        # Build context string
-        context_text = "\n\n".join([chunk["content"] for chunk in doc_context])
-    
-        # Grade questions (existing logic)
-        question_results = []
+        Grade a quiz that was generated by the quiz generation service.
         
-        for question in closed_ended_questions:
-            result = self.grade_closed_ended(question)
-            question_results.append(result)
-    
-        for question in open_ended_questions:
-            # Enhanced: Pass document context to grading
-            result = await self.grade_open_ended_with_context(
-                question, context_text
-            )
-            question_results.append(result)
-    
-        # Calculate totals
-        total_awarded = sum(r["awarded_points"] for r in question_results)
-        total_max = sum(r["max_points"] for r in question_results)
-        percentage = (total_awarded / total_max * 100) if total_max > 0 else 0
-    
-        # Generate feedback with document references
-        overall_feedback = await self.generate_contextual_feedback(
-        student_id, topic, percentage, question_results, doc_context
+        Args:
+            submission_id: Unique submission ID
+            student_id: Student's ID
+            quiz_data: Quiz from quiz_generation_service (has multiple_choice, true_false, short_answer)
+            student_answers: Dict mapping question indices to student answers
+                            e.g., {"mcq_0": "B", "tf_1": "true", "sa_2": "answer text"}
+        
+        Returns:
+            Complete grading results
+        """
+        
+        closed_ended = []
+        open_ended = []
+        
+        # Process multiple choice questions
+        for idx, mcq in enumerate(quiz_data.get("multiple_choice", [])):
+            answer_key = f"mcq_{idx}"
+            if answer_key in student_answers:
+                closed_ended.append({
+                    "question_id": answer_key,
+                    "question_text": mcq["question"],  # Added question_text
+                    "question_type": "mcq",  # Changed to match enum
+                    "correct_answer": mcq["correct_answer"],
+                    "student_answer": student_answers[answer_key],
+                    "points": 1
+                })
+        
+        # Process true/false questions
+        for idx, tf in enumerate(quiz_data.get("true_false", [])):
+            answer_key = f"tf_{idx}"
+            if answer_key in student_answers:
+                closed_ended.append({
+                    "question_id": answer_key,
+                    "question_text": tf["question"],  # Added question_text
+                    "question_type": "true_false",
+                    "correct_answer": str(tf["correct_answer"]).lower(),
+                    "student_answer": str(student_answers[answer_key]).lower(),
+                    "points": 1
+                })
+        
+        # Process short answer (open-ended) questions
+        for idx, sa in enumerate(quiz_data.get("short_answer", [])):
+            answer_key = f"sa_{idx}"
+            if answer_key in student_answers:
+                open_ended.append({
+                    "question_id": answer_key,
+                    "question_text": sa["question"],
+                    "question_type": "short_answer",
+                    "rubric": sa["sample_answer"],
+                    "keywords": sa.get("key_points", []),
+                    "student_answer": student_answers[answer_key],
+                    "points": 2
+                })
+        
+        # Grade the submission
+        return await self.grade_submission(
+            submission_id=submission_id,
+            student_id=student_id,
+            topic=quiz_data.get("difficulty_level", "General Assessment"),
+            closed_ended_questions=closed_ended,
+            open_ended_questions=open_ended
         )
-    
-        topic_mastery = self.analyze_topic_mastery(question_results, topic)
-    
-        return {
-        "submission_id": submission_id,
-        "student_id": student_id,
-        "topic": topic,
-        "course": course,
-        "total_points": round(total_awarded, 2),
-        "max_points": total_max,
-        "percentage": round(percentage, 2),
-        "grade_letter": self.calculate_letter_grade(percentage),
-        "question_results": question_results,
-        "overall_feedback": overall_feedback,
-        "topic_mastery": topic_mastery,
-        "document_references": [
-            {
-                "document_id": chunk["metadata"]["document_id"],
-                "relevance": "Referenced in grading"
-            }
-            for chunk in doc_context[:2]
-        ],
-        "graded_at": datetime.now().isoformat()
-        }
-
-    async def grade_open_ended_with_context(self, question: Dict, context: str) -> Dict:
-        """Grade open-ended with document context."""
-    
-        system_prompt = """You are grading a student answer with access to course materials.
-            Use the provided document context to evaluate accuracy."""
-
-        user_prompt = f"""COURSE MATERIAL:
-        {context[:2000]}
-
-        QUESTION: {question['question_text']}
-        RUBRIC: {question['rubric']}
-        STUDENT ANSWER: {question['student_answer']}
-
-        Grade the answer (0-100) considering if it aligns with the course material.
-        Return JSON: {{"score_percentage": 0-100, "strengths": [], "improvements": [], "feedback": "..."}}"""
-
-        try:
-            async with httpx.AsyncClient(timeout=45.0) as client:
-                response = await client.post(
-                self.groq_url,
-                headers={
-                    "Authorization": f"Bearer {self.groq_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 500
-                }
-                )
-            
-                if response.status_code == 200:
-                    result = response.json()
-                    llm_output = result["choices"][0]["message"]["content"]
-                    grading_data = self._parse_llm_grading(llm_output)
-                
-                    score_percentage = grading_data["score_percentage"]
-                    awarded_points = (score_percentage / 100) * question["points"]
-                
-                    return {
-                    "question_id": question["question_id"],
-                    "question_type": question["question_type"],
-                    "max_points": question["points"],
-                    "awarded_points": round(awarded_points, 2),
-                    "is_correct": None,
-                    "feedback": grading_data["feedback"],
-                    "strengths": grading_data["strengths"],
-                    "improvements": grading_data["improvements"],
-                    "document_aligned": True
-                    }
-        except Exception as e:
-            logger.error(f"Context-aware grading failed: {e}")
-            return self._fallback_keyword_grading(question)
-
-    async def generate_contextual_feedback(self,student_id: str,topic: str,percentage: float,question_results: List[Dict],doc_context: List[Dict]) -> str:
-        """Generate feedback with document page references."""
-    
-        # Extract weak areas
-        weak_questions = [
-            r for r in question_results 
-            if (r["awarded_points"] / r["max_points"]) < 0.7
-        ]
-    
-        # Build feedback with document references
-        feedback_parts = []
-    
-        if percentage >= 80:
-            feedback_parts.append(f"Excellent work on {topic}!")
-        elif percentage >= 60:
-            feedback_parts.append(f"Good effort on {topic}.")
-        else:
-            feedback_parts.append(f"You're making progress on {topic}.")
-    
-        # Add document-specific suggestions
-        if weak_questions and doc_context:
-            doc_ref = doc_context[0]["metadata"]
-            feedback_parts.append(
-            f"Review the materials from Week {doc_ref.get('week', 'N/A')} "
-            f"covering {doc_ref.get('topic', topic)}."
-            )
-    
-        return " ".join(feedback_parts)
-
