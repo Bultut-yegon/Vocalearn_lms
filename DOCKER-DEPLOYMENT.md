@@ -23,7 +23,7 @@ Complete guide for deploying VocaLearn AI Services using Docker.
 ```bash
 cd vocalearn_ai
 cp .env.example .env
-# Edit .env and add your GROQ_API_KEY
+# Edit .env and add your GROQAPI_KEY
 ```
 
 ### Step 2: Build and Run
@@ -77,7 +77,7 @@ Create `.env` file in project root:
 
 ```env
 # Required
-GROQ_API_KEY=your_groq_api_key_here
+GROQAPI_KEY=your_groq_api_key_here
 
 # Optional (with defaults)
 LLM_MODEL=llama-3.1-8b-instant
@@ -165,7 +165,7 @@ docker-compose down -v
 docker run -d \
   --name vocalearn-ai \
   -p 8000:8000 \
-  -e GROQ_API_KEY=your_key \
+  -e GROQAPI_KEY=your_key \
   -e WORKERS=4 \
   vocalearn-ai:latest
 ```

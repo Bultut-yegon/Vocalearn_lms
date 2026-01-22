@@ -396,9 +396,9 @@
 #     print("="*60)
     
 #     # Check API key
-#     if not os.getenv("GROQ_API_KEY"):
-#         print_error("\nGROQ_API_KEY not set!")
-#         print("Set it with: export GROQ_API_KEY='your_key_here'")
+#     if not os.getenv("GROQAPI_KEY"):
+#         print_error("\nGROQAPI_KEY not set!")
+#         print("Set it with: export GROQAPI_KEY='your_key_here'")
 #         return False
     
 #     tests = [
@@ -858,9 +858,9 @@ async def run_all_tests():
     print("="*60)
     
     # Check API key
-    if not os.getenv("GROQ_API_KEY"):
-        print_error("\nGROQ_API_KEY not set!")
-        print("Set it with: export GROQ_API_KEY='your_key_here'")
+    if not os.getenv("GROQAPI_KEY"):
+        print_error("\nGROQAPI_KEY not set!")
+        print("Set it with: export GROQAPI_KEY='your_key_here'")
         return False
     
     tests = [

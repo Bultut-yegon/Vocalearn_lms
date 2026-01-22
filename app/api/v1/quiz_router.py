@@ -228,18 +228,411 @@
 
 
 
+# """
+# Quiz Router - Matches your exact JSON format
+# Location: app/api/v1/quiz_router.py
+# """
+
+# from fastapi import APIRouter, HTTPException, status
+# from fastapi.responses import JSONResponse
+# from typing import Dict
+# from app.services.quiz_generation_service import (
+#     QuizGenerationService,
+#     QuizGenerationRequest,
+#     QuizResponse
+# )
+# from app.core.logging_config import logger
+
+# from app.models.quiz_models import (
+#     QuizGenerationRequest,
+#     QuizGenerationResult,
+#     WeeklyQuizGenerationRequest
+# )
+
+# import os
+
+# router = APIRouter()
+
+# # Initialize quiz service
+# try:
+#     groq_api_key = os.getenv("GROQAPI_KEY")
+#     if not groq_api_key:
+#         logger.error("GROQAPI_KEY not found in environment")
+#         quiz_service = None
+#     else:
+#         quiz_service = QuizGenerationService(groq_api_key=groq_api_key)
+#         logger.info("Quiz Generation Service initialized")
+# except Exception as e:
+#     logger.error(f" Failed to initialize Quiz Service: {e}")
+#     quiz_service = None
+
+
+# def check_service():
+#     """Verify service is available"""
+#     if quiz_service is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#             detail="Quiz generation service unavailable. Check GROQAPI_KEY configuration."
+#         )
+
+
+# @router.post(
+#     "/generate-weekly",
+#     response_model=QuizGenerationResult,
+#     status_code=status.HTTP_201_CREATED
+# )
+# async def generate_weekly_quiz(request: WeeklyQuizGenerationRequest):
+#     check_service()
+
+#     try:
+#         logger.info(
+#             f"Generating weekly quiz | Course={request.course_id}, Week={request.week_number}"
+#         )
+
+#         return await quiz_service.generate_weekly_quiz(request)
+
+#     except Exception as e:
+#         logger.error(f"Weekly quiz generation failed: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=500,
+#             detail="Failed to generate weekly quizzes"
+#         )
+
+
+#     except Exception as e:
+#         logger.error(f"Weekly quiz generation failed: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to generate weekly quizzes"
+#         )
+
+
+
+# @router.post("/generate", response_model=QuizGenerationResult, status_code=status.HTTP_201_CREATED)
+# async def generate_quiz(request: QuizGenerationRequest):
+#     """
+#     Generate quiz from content using your exact JSON format.
+    
+#     **Request Example:**
+#     ```json
+#     {
+#       "content": "Circuit breakers are automatic electrical switches designed to protect electrical circuits from damage caused by overcurrent. They work by detecting when current exceeds safe levels and automatically interrupting the circuit...",
+#       "difficulty_level": "intermediate",
+#       "num_mcq": 5,
+#       "num_true_false": 5,
+#       "num_short_answer": 2,
+#       "num_of_options": 4
+#     }
+#     ```
+    
+#     **Parameters:**
+#     - **content**: The learning content from your database (min 100 chars)
+#     - **difficulty_level**: "beginner", "intermediate", or "advanced"
+#     - **num_mcq**: Number of multiple choice questions (0-20)
+#     - **num_true_false**: Number of true/false questions (0-20)
+#     - **num_short_answer**: Number of open-ended questions (0-10)
+#     - **num_of_options**: Number of MCQ options (2-6, typically 4 for A,B,C,D)
+    
+#     **Response:** Complete quiz with all question types
+#     """
+#     check_service()
+    
+#     try:
+#         # Validate content length
+#         if len(request.content.strip()) < 100:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="Content must be at least 100 characters to generate meaningful questions"
+#             )
+        
+#         # Validate at least one question type is requested
+#         total_questions = request.num_mcq + request.num_true_false + request.num_short_answer
+#         if total_questions == 0:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="Must request at least one question (num_mcq, num_true_false, or num_short_answer must be > 0)"
+#             )
+        
+#         if total_questions > 50:
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="Total questions cannot exceed 50"
+#             )
+        
+#         logger.info(f"Generating quiz: MCQ={request.num_mcq}, T/F={request.num_true_false}, SA={request.num_short_answer}")
+        
+#         # Generate quiz
+#         quiz = await quiz_service.generate_quiz(request)
+        
+#         logger.info(f"Quiz generated: {quiz.quiz_id} with {quiz.total_questions} questions")
+        
+#         return quiz
+        
+#     except HTTPException:
+#         raise
+#     except ValueError as ve:
+#         logger.error(f"Validation error: {ve}")
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail=str(ve)
+#         )
+#     except Exception as e:
+#         logger.error(f"Quiz generation failed: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Quiz generation failed: {str(e)}"
+#         )
+
+
+# @router.post("/generate-batch")
+# async def generate_quiz_batch(requests: list[QuizGenerationRequest]):
+#     """
+#     Generate multiple quizzes in one request (for batch processing).
+    
+#     **Use case:** Generate quizzes for multiple topics/students at once
+    
+#     **Request Example:**
+#     ```json
+#     [
+#       {
+#         "content": "Content 1...",
+#         "difficulty_level": "beginner",
+#         "num_mcq": 5,
+#         "num_true_false": 5,
+#         "num_short_answer": 2,
+#         "num_of_options": 4
+#       },
+#       {
+#         "content": "Content 2...",
+#         "difficulty_level": "advanced",
+#         "num_mcq": 10,
+#         "num_true_false": 0,
+#         "num_short_answer": 5,
+#         "num_of_options": 4
+#       }
+#     ]
+#     ```
+#     """
+#     check_service()
+    
+#     if len(requests) > 10:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Maximum 10 quizzes per batch request"
+#         )
+    
+#     try:
+#         quizzes = []
+#         errors = []
+        
+#         for idx, req in enumerate(requests):
+#             try:
+#                 quiz = await quiz_service.generate_quiz(req)
+#                 quizzes.append(quiz)
+#             except Exception as e:
+#                 logger.error(f"Failed to generate quiz {idx}: {e}")
+#                 errors.append({
+#                     "index": idx,
+#                     "error": str(e)
+#                 })
+        
+#         return {
+#             "success": len(quizzes),
+#             "failed": len(errors),
+#             "quizzes": quizzes,
+#             "errors": errors
+#         }
+        
+#     except Exception as e:
+#         logger.error(f"Batch generation failed: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=str(e)
+#         )
+
+
+# @router.get("/health")
+# async def health_check():
+#     """Check quiz service health"""
+#     if quiz_service is None:
+#         return {
+#             "status": "unavailable",
+#             "service": "quiz_generation",
+#             "error": "GROQAPI_KEY not configured"
+#         }
+    
+#     return {
+#         "status": "healthy",
+#         "service": "quiz_generation",
+#         "model": quiz_service.model,
+#         "supported_question_types": [
+#             "multiple_choice",
+#             "true_false",
+#             "short_answer"
+#         ],
+#         "max_questions_per_type": {
+#             "mcq": 20,
+#             "true_false": 20,
+#             "short_answer": 10
+#         },
+#         "max_total_questions": 50
+#     }
+
+
+# @router.get("/format-example")
+# async def get_format_example():
+#     """
+#     Get example of the expected request format.
+#     Useful for Java developers integrating with this API.
+#     """
+#     return {
+#         "description": "Quiz generation request format",
+#         "example_request": {
+#             "content": "Your learning content from database goes here. It should be at least 100 characters long. For example: Circuit breakers are automatic electrical switches designed to protect electrical circuits from damage caused by overcurrent. When excessive current flows through the circuit, the circuit breaker trips and interrupts the flow of electricity.",
+#             "difficulty_level": "intermediate",
+#             "num_mcq": 5,
+#             "num_true_false": 5,
+#             "num_short_answer": 2,
+#             "num_of_options": 4
+#         },
+#         "field_descriptions": {
+#             "content": "Learning content from your database (min 100 characters)",
+#             "difficulty_level": "beginner | intermediate | advanced",
+#             "num_mcq": "Number of multiple choice questions (0-20)",
+#             "num_true_false": "Number of true/false questions (0-20)",
+#             "num_short_answer": "Number of open-ended questions (0-10)",
+#             "num_of_options": "Number of options per MCQ (2-6, typically 4)"
+#         },
+#         "response_structure": {
+#             "quiz_id": "unique identifier",
+#             "generated_at": "ISO timestamp",
+#             "difficulty_level": "requested difficulty",
+#             "total_questions": "total count",
+#             "multiple_choice": [
+#                 {
+#                     "question": "Question text?",
+#                     "options": {
+#                         "A": "Option A",
+#                         "B": "Option B",
+#                         "C": "Option C",
+#                         "D": "Option D"
+#                     },
+#                     "correct_answer": "B",
+#                     "explanation": "Why B is correct"
+#                 }
+#             ],
+#             "true_false": [
+#                 {
+#                     "question": "Statement here.",
+#                     "correct_answer": True,
+#                     "explanation": "Why this is true/false"
+#                 }
+#             ],
+#             "short_answer": [
+#                 {
+#                     "question": "Open-ended question?",
+#                     "key_points": ["Point 1", "Point 2"],
+#                     "sample_answer": "Example answer"
+#                 }
+#             ]
+#         }
+#     }
+
+
+# @router.get("/difficulty-levels")
+# async def get_difficulty_info():
+#     """Get information about difficulty levels"""
+#     return {
+#         "difficulty_levels": {
+#             "beginner": {
+#                 "description": "Basic recall and simple understanding",
+#                 "characteristics": [
+#                     "Straightforward questions",
+#                     "Clear, unambiguous answers",
+#                     "Tests basic knowledge"
+#                 ]
+#             },
+#             "intermediate": {
+#                 "description": "Application and analysis",
+#                 "characteristics": [
+#                     "Requires understanding of concepts",
+#                     "May involve application to scenarios",
+#                     "Tests comprehension and reasoning"
+#                 ]
+#             },
+#             "advanced": {
+#                 "description": "Complex analysis and synthesis",
+#                 "characteristics": [
+#                     "Requires deep understanding",
+#                     "May involve multiple concepts",
+#                     "Tests critical thinking"
+#                 ]
+#             }
+#         }
+#     }
+
+
+# @router.post("/validate-request")
+# async def validate_request(request: QuizGenerationRequest):
+#     """
+#     Validate a quiz generation request without actually generating.
+#     Useful for frontend validation before submission.
+#     """
+#     try:
+#         total = request.num_mcq + request.num_true_false + request.num_short_answer
+        
+#         return {
+#             "valid": True,
+#             "summary": {
+#                 "content_length": len(request.content),
+#                 "difficulty_level": request.difficulty_level,
+#                 "total_questions": total,
+#                 "breakdown": {
+#                     "multiple_choice": request.num_mcq,
+#                     "true_false": request.num_true_false,
+#                     "short_answer": request.num_short_answer
+#                 },
+#                 "estimated_generation_time": f"{total * 2}-{total * 3} seconds"
+#             }
+#         }
+#     except Exception as e:
+#         return {
+#             "valid": False,
+#             "error": str(e)
+#         }
+
+
+
+
+
+
+# VERSION 3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
-Quiz Router - Matches your exact JSON format
-Location: app/api/v1/quiz_router.py
+Quiz Router - FIXED VERSION
 """
 
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
-from typing import Dict
-from app.services.quiz_generation_service import (
-    QuizGenerationService,
-    QuizGenerationRequest,
-    QuizResponse
+from app.services.quiz_generation_service import QuizGenerationService
+from app.models.quiz_models import (
+    WeeklyQuizGenerationRequest,
+    QuizGenerationResult
 )
 from app.core.logging_config import logger
 import os
@@ -248,9 +641,9 @@ router = APIRouter()
 
 # Initialize quiz service
 try:
-    groq_api_key = os.getenv("GROQ_API_KEY")
+    groq_api_key = os.getenv("GROQAPI_KEY")
     if not groq_api_key:
-        logger.error("GROQ_API_KEY not found in environment")
+        logger.error("❌ GROQAPI_KEY not found in environment")
         quiz_service = None
     else:
         quiz_service = QuizGenerationService(groq_api_key=groq_api_key)
@@ -265,150 +658,67 @@ def check_service():
     if quiz_service is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Quiz generation service unavailable. Check GROQ_API_KEY configuration."
+            detail="Quiz generation service unavailable. Check GROQAPI_KEY configuration."
         )
 
 
-@router.post("/generate", response_model=QuizResponse, status_code=status.HTTP_201_CREATED)
-async def generate_quiz(request: QuizGenerationRequest):
+@router.post(
+    "/generate-weekly",
+    response_model=QuizGenerationResult,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate weekly quiz",
+    description="Generate a Canvas-style quiz for one week of content"
+)
+async def generate_weekly_quiz(request: WeeklyQuizGenerationRequest):
     """
-    Generate quiz from content using your exact JSON format.
+    Generate weekly quiz from combined content.
     
     **Request Example:**
     ```json
     {
-      "content": "Circuit breakers are automatic electrical switches designed to protect electrical circuits from damage caused by overcurrent. They work by detecting when current exceeds safe levels and automatically interrupting the circuit...",
+      "course_id": "CS101",
+      "week_number": 3,
+      "modules": ["Module 1", "Module 2"],
+      "combined_content": "Your week's learning content here (min 100 chars)...",
       "difficulty_level": "intermediate",
       "num_mcq": 5,
       "num_true_false": 5,
       "num_short_answer": 2,
-      "num_of_options": 4
+      "student_id": "optional_student_id"
     }
     ```
     
-    **Parameters:**
-    - **content**: The learning content from your database (min 100 chars)
-    - **difficulty_level**: "beginner", "intermediate", or "advanced"
-    - **num_mcq**: Number of multiple choice questions (0-20)
-    - **num_true_false**: Number of true/false questions (0-20)
-    - **num_short_answer**: Number of open-ended questions (0-10)
-    - **num_of_options**: Number of MCQ options (2-6, typically 4 for A,B,C,D)
-    
-    **Response:** Complete quiz with all question types
+    **Returns:** Complete quiz with MCQ, T/F, and short answer questions
     """
     check_service()
-    
+
     try:
-        # Validate content length
-        if len(request.content.strip()) < 100:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Content must be at least 100 characters to generate meaningful questions"
-            )
+        logger.info(
+            f"📝 Generating weekly quiz | Course={request.course_id}, "
+            f"Week={request.week_number}"
+        )
+
+        # Generate the quiz
+        result = await quiz_service.generate_weekly_quiz(request)
         
-        # Validate at least one question type is requested
-        total_questions = request.num_mcq + request.num_true_false + request.num_short_answer
-        if total_questions == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Must request at least one question (num_mcq, num_true_false, or num_short_answer must be > 0)"
-            )
+        logger.info(
+            f"✅ Weekly quiz generated: {result.quiz_id} | "
+            f"{result.total_questions} questions"
+        )
         
-        if total_questions > 50:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Total questions cannot exceed 50"
-            )
-        
-        logger.info(f"Generating quiz: MCQ={request.num_mcq}, T/F={request.num_true_false}, SA={request.num_short_answer}")
-        
-        # Generate quiz
-        quiz = await quiz_service.generate_quiz(request)
-        
-        logger.info(f"Quiz generated: {quiz.quiz_id} with {quiz.total_questions} questions")
-        
-        return quiz
-        
-    except HTTPException:
-        raise
+        return result
+
     except ValueError as ve:
-        logger.error(f"Validation error: {ve}")
+        logger.error(f"❌ Validation error: {ve}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
     except Exception as e:
-        logger.error(f"Quiz generation failed: {e}", exc_info=True)
+        logger.error(f"❌ Weekly quiz generation failed: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Quiz generation failed: {str(e)}"
-        )
-
-
-@router.post("/generate-batch")
-async def generate_quiz_batch(requests: list[QuizGenerationRequest]):
-    """
-    Generate multiple quizzes in one request (for batch processing).
-    
-    **Use case:** Generate quizzes for multiple topics/students at once
-    
-    **Request Example:**
-    ```json
-    [
-      {
-        "content": "Content 1...",
-        "difficulty_level": "beginner",
-        "num_mcq": 5,
-        "num_true_false": 5,
-        "num_short_answer": 2,
-        "num_of_options": 4
-      },
-      {
-        "content": "Content 2...",
-        "difficulty_level": "advanced",
-        "num_mcq": 10,
-        "num_true_false": 0,
-        "num_short_answer": 5,
-        "num_of_options": 4
-      }
-    ]
-    ```
-    """
-    check_service()
-    
-    if len(requests) > 10:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 10 quizzes per batch request"
-        )
-    
-    try:
-        quizzes = []
-        errors = []
-        
-        for idx, req in enumerate(requests):
-            try:
-                quiz = await quiz_service.generate_quiz(req)
-                quizzes.append(quiz)
-            except Exception as e:
-                logger.error(f"Failed to generate quiz {idx}: {e}")
-                errors.append({
-                    "index": idx,
-                    "error": str(e)
-                })
-        
-        return {
-            "success": len(quizzes),
-            "failed": len(errors),
-            "quizzes": quizzes,
-            "errors": errors
-        }
-        
-    except Exception as e:
-        logger.error(f"Batch generation failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to generate weekly quiz: {str(e)}"
         )
 
 
@@ -419,7 +729,7 @@ async def health_check():
         return {
             "status": "unavailable",
             "service": "quiz_generation",
-            "error": "GROQ_API_KEY not configured"
+            "error": "GROQAPI_KEY not configured"
         }
     
     return {
@@ -431,133 +741,45 @@ async def health_check():
             "true_false",
             "short_answer"
         ],
-        "max_questions_per_type": {
-            "mcq": 20,
-            "true_false": 20,
-            "short_answer": 10
-        },
-        "max_total_questions": 50
+        "endpoints": {
+            "weekly_quiz": "/generate-weekly",
+            "health": "/health"
+        }
     }
 
 
-@router.get("/format-example")
-async def get_format_example():
+@router.get("/example-request")
+async def get_example_request():
     """
-    Get example of the expected request format.
-    Useful for Java developers integrating with this API.
+    Get example request format for weekly quiz generation.
     """
     return {
-        "description": "Quiz generation request format",
-        "example_request": {
-            "content": "Your learning content from database goes here. It should be at least 100 characters long. For example: Circuit breakers are automatic electrical switches designed to protect electrical circuits from damage caused by overcurrent. When excessive current flows through the circuit, the circuit breaker trips and interrupts the flow of electricity.",
+        "description": "Weekly quiz generation request format",
+        "example": {
+            "course_id": "TVET-101",
+            "week_number": 1,
+            "modules": [
+                "Introduction to Circuit Breakers",
+                "Safety Procedures"
+            ],
+            "combined_content": "Circuit breakers are automatic electrical switches designed to protect electrical circuits from damage caused by overcurrent. They detect when current exceeds safe levels and automatically interrupt the circuit. Modern circuit breakers use thermal or magnetic mechanisms. Thermal breakers use a bimetallic strip that bends when heated, while magnetic breakers use an electromagnet. Safety procedures require proper PPE and lockout/tagout protocols.",
             "difficulty_level": "intermediate",
             "num_mcq": 5,
-            "num_true_false": 5,
+            "num_true_false": 3,
             "num_short_answer": 2,
-            "num_of_options": 4
+            "student_id": None
         },
-        "field_descriptions": {
-            "content": "Learning content from your database (min 100 characters)",
-            "difficulty_level": "beginner | intermediate | advanced",
-            "num_mcq": "Number of multiple choice questions (0-20)",
-            "num_true_false": "Number of true/false questions (0-20)",
-            "num_short_answer": "Number of open-ended questions (0-10)",
-            "num_of_options": "Number of options per MCQ (2-6, typically 4)"
-        },
-        "response_structure": {
-            "quiz_id": "unique identifier",
-            "generated_at": "ISO timestamp",
-            "difficulty_level": "requested difficulty",
-            "total_questions": "total count",
-            "multiple_choice": [
-                {
-                    "question": "Question text?",
-                    "options": {
-                        "A": "Option A",
-                        "B": "Option B",
-                        "C": "Option C",
-                        "D": "Option D"
-                    },
-                    "correct_answer": "B",
-                    "explanation": "Why B is correct"
-                }
-            ],
-            "true_false": [
-                {
-                    "question": "Statement here.",
-                    "correct_answer": True,
-                    "explanation": "Why this is true/false"
-                }
-            ],
-            "short_answer": [
-                {
-                    "question": "Open-ended question?",
-                    "key_points": ["Point 1", "Point 2"],
-                    "sample_answer": "Example answer"
-                }
-            ]
+        "required_fields": [
+            "course_id",
+            "week_number",
+            "modules",
+            "combined_content"
+        ],
+        "optional_fields": {
+            "difficulty_level": "beginner | intermediate | advanced (default: intermediate)",
+            "num_mcq": "0-20 (default: 5)",
+            "num_true_false": "0-20 (default: 5)",
+            "num_short_answer": "0-10 (default: 2)",
+            "student_id": "Optional for adaptive quizzes"
         }
     }
-
-
-@router.get("/difficulty-levels")
-async def get_difficulty_info():
-    """Get information about difficulty levels"""
-    return {
-        "difficulty_levels": {
-            "beginner": {
-                "description": "Basic recall and simple understanding",
-                "characteristics": [
-                    "Straightforward questions",
-                    "Clear, unambiguous answers",
-                    "Tests basic knowledge"
-                ]
-            },
-            "intermediate": {
-                "description": "Application and analysis",
-                "characteristics": [
-                    "Requires understanding of concepts",
-                    "May involve application to scenarios",
-                    "Tests comprehension and reasoning"
-                ]
-            },
-            "advanced": {
-                "description": "Complex analysis and synthesis",
-                "characteristics": [
-                    "Requires deep understanding",
-                    "May involve multiple concepts",
-                    "Tests critical thinking"
-                ]
-            }
-        }
-    }
-
-
-@router.post("/validate-request")
-async def validate_request(request: QuizGenerationRequest):
-    """
-    Validate a quiz generation request without actually generating.
-    Useful for frontend validation before submission.
-    """
-    try:
-        total = request.num_mcq + request.num_true_false + request.num_short_answer
-        
-        return {
-            "valid": True,
-            "summary": {
-                "content_length": len(request.content),
-                "difficulty_level": request.difficulty_level,
-                "total_questions": total,
-                "breakdown": {
-                    "multiple_choice": request.num_mcq,
-                    "true_false": request.num_true_false,
-                    "short_answer": request.num_short_answer
-                },
-                "estimated_generation_time": f"{total * 2}-{total * 3} seconds"
-            }
-        }
-    except Exception as e:
-        return {
-            "valid": False,
-            "error": str(e)
-        }

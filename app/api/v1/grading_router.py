@@ -577,9 +577,9 @@ class QuizSubmission(BaseModel):
     student_answers: Dict[str, str]  # {"mcq_0": "B", "tf_1": "true", "sa_2": "answer text"}
 
 
-# ============================================================================
+
 # ENDPOINTS
-# ============================================================================
+
 
 def check_service():
     """Verify grading service is available"""
@@ -857,7 +857,7 @@ async def health_check():
             "error": "Service not initialized"
         }
     
-    groq_available = bool(os.getenv("GROQ_API_KEY"))
+    groq_available = bool(os.getenv("GROQAPI_KEY"))
     
     return {
         "status": "healthy",

@@ -17,7 +17,7 @@
     
 #     # Environment variables
 #     environment:
-#       - GROQ_API_KEY=${GROQ_API_KEY}
+#       - GROQ_API_KEY=${GROQAPI_KEY}
 #       - LLM_MODEL=${LLM_MODEL:-llama-3.1-8b-instant}
 #       - ENV=${ENV:-production}
 #       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
@@ -160,7 +160,7 @@ services:
     
     # Environment variables
     environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_API_KEY=${GROQAPI_KEY}
       - LLM_MODEL=${LLM_MODEL:-llama-3.1-8b-instant}
       - ENV=${ENV:-production}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}

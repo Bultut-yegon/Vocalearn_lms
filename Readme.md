@@ -151,7 +151,7 @@ Open `.env` and add the following:
 
 ```env
 # Required: Groq API Configuration
-GROQ_API_KEY=your_groq_api_key_here
+GROQAPI_KEY=your_groq_api_key_here
 
 # Optional: LLM Configuration
 LLM_MODEL=llama-3.1-8b-instant
@@ -676,7 +676,7 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements.txt
 ```
 
-#### Issue 2: "Missing GROQ_API_KEY"
+#### Issue 2: "Missing GROQAPI_KEY"
 
 **Problem**: Environment variable not set
 
@@ -686,10 +686,10 @@ pip install -r requirements.txt
 ls -la | grep .env
 
 # Verify API key is set
-cat .env | grep GROQ_API_KEY
+cat .env | grep GROQAPI_KEY
 
 # If missing, add to .env file
-echo "GROQ_API_KEY=your_key_here" >> .env
+echo "GROQAPI_KEY=your_key_here" >> .env
 
 # Restart server
 ```

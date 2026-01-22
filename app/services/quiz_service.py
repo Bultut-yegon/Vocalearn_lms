@@ -14,7 +14,7 @@ class QuizGeneratorService:
     """
     
     def __init__(self):
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.groq_api_key = os.getenv("GROQAPI_KEY")
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
         self.mcq_options_count = 4

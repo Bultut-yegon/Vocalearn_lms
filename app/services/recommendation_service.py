@@ -1560,111 +1560,1876 @@
 
 # VERSION 2
 
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# from sklearn.preprocessing import MinMaxScaler
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+# import json
+# # from app.services.document_service import DocumentProcessingService
+
+# # Load environment variables
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     AI-powered recommendation system for TVET students.
+#     Analyzes performance to suggest personalized learning paths.
+#     """
+    
+#     def __init__(self):
+#         # Load API key from environment
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not found. LLM-powered insights will not be available.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")  # Fast & free on Groq
+#         self.weak_threshold = 0.6  # Below 60% = needs improvement
+#         self.strong_threshold = 0.8  # Above 80% = strength
+        
+#         # Initialize document service
+#         try:
+#             self.doc_service = DocumentProcessingService()
+#         except Exception as e:
+#             logger.warning(f"Document service initialization failed: {e}")
+#             self.doc_service = None
+        
+#         logger.info("RecommendationService initialized")
+        
+#     def calculate_performance_metrics(
+#         self, 
+#         performance_history: List[Dict]
+#     ) -> Dict[str, float]:
+#         """Calculate normalized scores and identify patterns."""
+#         topic_performance = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_performance:
+#                 topic_performance[topic] = []
+#             topic_performance[topic].append(normalized_score)
+        
+#         # Average performance per topic
+#         topic_averages = {
+#             topic: np.mean(scores) 
+#             for topic, scores in topic_performance.items()
+#         }
+        
+#         return topic_averages
+    
+#     def identify_strengths_weaknesses(
+#         self, 
+#         topic_averages: Dict[str, float]
+#     ) -> Tuple[List[str], List[str]]:
+#         """Classify topics into strengths and weaknesses."""
+#         strengths = [
+#             topic for topic, score in topic_averages.items() 
+#             if score >= self.strong_threshold
+#         ]
+        
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items() 
+#             if score < self.weak_threshold
+#         ]
+        
+#         return strengths, weaknesses
+    
+#     def detect_trends(
+#         self, 
+#         performance_history: List[Dict]
+#     ) -> Dict[str, str]:
+#         """Detect if student is improving, declining, or stable."""
+#         topic_trends = {}
+#         topic_scores_timeline = {}
+        
+#         # Group scores by topic in chronological order
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_scores_timeline:
+#                 topic_scores_timeline[topic] = []
+#             topic_scores_timeline[topic].append(normalized_score)
+        
+#         # Analyze trend for each topic
+#         for topic, scores in topic_scores_timeline.items():
+#             if len(scores) < 2:
+#                 topic_trends[topic] = "insufficient_data"
+#                 continue
+                
+#             # Simple linear trend detection
+#             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
+#             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
+            
+#             if recent_avg > early_avg + 0.1:
+#                 topic_trends[topic] = "improving"
+#             elif recent_avg < early_avg - 0.1:
+#                 topic_trends[topic] = "declining"
+#             else:
+#                 topic_trends[topic] = "stable"
+        
+#         return topic_trends
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[str],
+#         strengths: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float]
+#     ) -> Dict[str, any]:
+#         """Create a prioritized study plan."""
+#         # Priority 1: Declining topics (urgent)
+#         declining_topics = [
+#             topic for topic, trend in trends.items() 
+#             if trend == "declining"
+#         ]
+        
+#         # Priority 2: Weak topics (needs improvement)
+#         improvement_topics = [
+#             topic for topic in weaknesses 
+#             if topic not in declining_topics
+#         ]
+        
+#         # Priority 3: Build on strengths (next level)
+#         advancement_topics = [
+#             topic for topic in strengths
+#             if trends.get(topic) == "improving"
+#         ]
+        
+#         study_plan = {
+#             "urgent_review": {
+#                 "topics": declining_topics,
+#                 "reason": "Performance is declining - immediate attention needed",
+#                 "suggested_hours": len(declining_topics) * 3
+#             },
+#             "skill_building": {
+#                 "topics": improvement_topics,
+#                 "reason": "Below mastery threshold - foundational work needed",
+#                 "suggested_hours": len(improvement_topics) * 2
+#             },
+#             "advancement": {
+#                 "topics": advancement_topics,
+#                 "reason": "Strong foundation - ready for advanced concepts",
+#                 "suggested_hours": len(advancement_topics) * 1.5
+#             }
+#         }
+        
+#         return study_plan
+    
+#     async def generate_llm_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         study_plan: Dict[str, any]
+#     ) -> Tuple[str, str]:
+#         """Use LLM to generate personalized explanation and motivation."""
+        
+#         # Check if API key is available
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not available, using fallback messages")
+#             explanation = "Your performance data shows areas of strength and opportunities for growth."
+#             motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
+#             return explanation, motivation
+        
+#         system_prompt = "You are a supportive TVET instructor. Be encouraging, specific, and practical. Focus on trades skills like wiring and plumbing."
+        
+#         user_prompt = f"""Student Performance Summary:
+# - Strong Topics: {', '.join(strengths) if strengths else 'None yet'}
+# - Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'None'}
+# - Performance Trends: {trends}
+# - Topic Scores: {topic_averages}
+
+# Study Plan:
+# {study_plan}
+
+# Generate two parts:
+# 1. A brief explanation (2-3 sentences) of their learning pattern
+# 2. An encouraging motivational message (2-3 sentences) specific to their situation
+
+# Separate the two parts with a blank line."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 300
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+                    
+#                     # Split into explanation and motivation
+#                     parts = llm_output.split("\n\n")
+#                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
+#                     motivation = parts[1].strip() if len(parts) > 1 else "Keep pushing forward! Every expert was once a beginner."
+                    
+#                     return explanation, motivation
+#                 else:
+#                     logger.error(f"Groq API error: {response.status_code} - {response.text}")
+#                     raise Exception(f"Groq returned status {response.status_code}")
+            
+#         except Exception as e:
+#             logger.error(f"LLM generation failed: {e}")
+#             # Fallback messages
+#             explanation = "Your performance data shows areas of strength and opportunities for growth."
+#             motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
+#             return explanation, motivation
+    
+#     async def generate_recommendations(
+#         self,
+#         performance_history: List[Dict],
+#         topic_scores: Dict[str, float]
+#     ) -> Dict[str, any]:
+#         """Main method to generate comprehensive recommendations."""
+        
+#         # Calculate metrics
+#         topic_averages = self.calculate_performance_metrics(performance_history)
+        
+#         # Merge with provided topic_scores if available
+#         if topic_scores:
+#             topic_averages.update(topic_scores)
+        
+#         # Identify strengths and weaknesses
+#         strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+        
+#         # Detect trends
+#         trends = self.detect_trends(performance_history)
+        
+#         # Generate study plan
+#         study_plan = self.generate_study_plan(
+#             weaknesses, strengths, trends, topic_averages
+#         )
+        
+#         # Get LLM insights
+#         explanation, motivation = await self.generate_llm_insights(
+#             strengths, weaknesses, trends, topic_averages, study_plan
+#         )
+        
+#         # Compile topic recommendations (prioritized list)
+#         topic_recommendations = (
+#             study_plan["urgent_review"]["topics"] +
+#             study_plan["skill_building"]["topics"] +
+#             study_plan["advancement"]["topics"]
+#         )
+        
+#         return {
+#             "topic_recommendations": topic_recommendations,
+#             "study_plan": study_plan,
+#             "strengths": strengths,
+#             "trends": trends,
+#             "motivational_message": motivation,
+#             "llm_explanation": explanation
+#         }
+
+#     def track_improvement(
+#         self,
+#         student_id: str,
+#         current_metrics: Dict[str, float],
+#         previous_metrics: Optional[Dict[str, float]] = None
+#     ) -> Dict[str, any]:
+#         """
+#         Track student improvement over time.
+#         Compares current performance against previous assessment.
+#         """
+#         if not previous_metrics:
+#             return {
+#                 "student_id": student_id,
+#                 "baseline_established": True,
+#                 "message": "Baseline performance recorded. Next assessment will show progress.",
+#                 "current_metrics": current_metrics,
+#                 "timestamp": datetime.now().isoformat()
+#             }
+        
+#         improvements = {}
+#         declines = {}
+#         stable = {}
+        
+#         for topic, current_score in current_metrics.items():
+#             if topic in previous_metrics:
+#                 previous_score = previous_metrics[topic]
+#                 change = current_score - previous_score
+#                 change_percent = (change / previous_score * 100) if previous_score > 0 else 0
+                
+#                 if change > 0.05:  # 5% improvement threshold
+#                     improvements[topic] = {
+#                         "previous": round(previous_score, 2),
+#                         "current": round(current_score, 2),
+#                         "change": round(change, 2),
+#                         "change_percent": round(change_percent, 1)
+#                     }
+#                 elif change < -0.05:  # 5% decline threshold
+#                     declines[topic] = {
+#                         "previous": round(previous_score, 2),
+#                         "current": round(current_score, 2),
+#                         "change": round(change, 2),
+#                         "change_percent": round(change_percent, 1)
+#                     }
+#                 else:
+#                     stable[topic] = {
+#                         "score": round(current_score, 2)
+#                     }
+        
+#         # New topics that weren't in previous assessment
+#         new_topics = {
+#             topic: round(score, 2) 
+#             for topic, score in current_metrics.items() 
+#             if topic not in previous_metrics
+#         }
+        
+#         # Overall progress indicator
+#         if previous_metrics:
+#             avg_previous = np.mean(list(previous_metrics.values()))
+#             avg_current = np.mean(list(current_metrics.values()))
+#             overall_change = avg_current - avg_previous
+            
+#             if overall_change > 0.05:
+#                 progress_status = "improving"
+#             elif overall_change < -0.05:
+#                 progress_status = "declining"
+#             else:
+#                 progress_status = "stable"
+#         else:
+#             progress_status = "baseline"
+        
+#         return {
+#             "student_id": student_id,
+#             "timestamp": datetime.now().isoformat(),
+#             "progress_status": progress_status,
+#             "improvements": improvements,
+#             "declines": declines,
+#             "stable_topics": stable,
+#             "new_topics": new_topics,
+#             "summary": {
+#                 "topics_improved": len(improvements),
+#                 "topics_declined": len(declines),
+#                 "topics_stable": len(stable),
+#                 "new_topics_count": len(new_topics)
+#             }
+#         }
+
+#     def generate_report_data(
+#         self,
+#         student_id: str,
+#         student_name: str,
+#         recommendations: Dict[str, any],
+#         improvement_tracking: Optional[Dict[str, any]] = None
+#     ) -> Dict[str, any]:
+#         """
+#         Generate structured report data for export.
+#         """
+#         report = {
+#             "report_metadata": {
+#                 "student_id": student_id,
+#                 "student_name": student_name,
+#                 "generated_at": datetime.now().isoformat(),
+#                 "report_type": "Performance Analysis & Recommendations"
+#             },
+#             "performance_summary": {
+#                 "strengths": recommendations.get("strengths", []),
+#                 "areas_for_improvement": recommendations["study_plan"]["skill_building"]["topics"],
+#                 "urgent_attention_needed": recommendations["study_plan"]["urgent_review"]["topics"],
+#                 "ready_for_advancement": recommendations["study_plan"]["advancement"]["topics"]
+#             },
+#             "detailed_analysis": {
+#                 "topic_trends": recommendations.get("trends", {}),
+#                 "llm_insights": {
+#                     "explanation": recommendations.get("llm_explanation", ""),
+#                     "motivation": recommendations.get("motivational_message", "")
+#                 }
+#             },
+#             "study_plan": recommendations.get("study_plan", {}),
+#             "recommended_actions": recommendations.get("topic_recommendations", [])
+#         }
+        
+#         # Add improvement tracking if available
+#         if improvement_tracking:
+#             report["progress_tracking"] = improvement_tracking
+        
+#         return report
+
+#     async def generate_recommendations_with_documents(
+#         self,
+#         student_id: str,
+#         performance_history: List[Dict],
+#         topic_scores: Dict[str, float],
+#         course: str
+#     ) -> Dict:
+#         """
+#         Generate recommendations with document-specific study suggestions.
+#         """
+        
+#         # Generate base recommendations (existing logic)
+#         base_recommendations = await self.generate_recommendations(performance_history, topic_scores)
+        
+#         # Check if document service is available
+#         if not self.doc_service:
+#             logger.warning("Document service not available, skipping document references")
+#             base_recommendations["study_materials"] = []
+#             base_recommendations["document_references"] = 0
+#             return base_recommendations
+        
+#         # Identify weak topics
+#         topic_averages = self.calculate_performance_metrics(performance_history)
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items()
+#             if score < self.weak_threshold
+#         ]
+        
+#         # Get document references for weak topics
+#         study_materials = []
+#         for weak_topic in weaknesses[:3]:  # Top 3 weak areas
+#             try:
+#                 relevant_docs = self.doc_service.retrieve_relevant_content(
+#                     query=weak_topic,
+#                     filters={"course": course},
+#                     top_k=2
+#                 )
+                
+#                 for doc in relevant_docs:
+#                     study_materials.append({
+#                         "topic": weak_topic,
+#                         "document_id": doc["metadata"]["document_id"],
+#                         "week": doc["metadata"].get("week"),
+#                         "section": doc["content"][:200] + "...",
+#                         "relevance": f"Review this for {weak_topic}"
+#                     })
+#             except Exception as e:
+#                 logger.error(f"Failed to retrieve documents for {weak_topic}: {e}")
+#                 continue
+        
+#         # Enhance recommendations
+#         base_recommendations["study_materials"] = study_materials
+#         base_recommendations["document_references"] = len(study_materials)
+        
+#         return base_recommendations
+
+
+
+
+
+
+
+# VERSION 3
+
+
+
+
+# """recommendation service"""
+
+
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# from sklearn.preprocessing import MinMaxScaler
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+# import json
+
+
+# # Load environment variables
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     AI-powered recommendation system for TVET students.
+#     Analyzes performance to suggest personalized learning paths.
+#     """
+    
+#     def __init__(self):
+#         # Load API key from environment
+#         self.groq_api_key = os.getenv("GROQ_API_KEY")
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not found. LLM-powered insights will not be available.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")  # Fast & free on Groq
+#         self.weak_threshold = 0.6  # Below 60% = needs improvement
+#         self.strong_threshold = 0.8  # Above 80% = strength
+        
+#         # Initialize document service
+#         try:
+#             self.doc_service = DocumentProcessingService()
+#         except Exception as e:
+#             logger.warning(f"Document service initialization failed: {e}")
+#             self.doc_service = None
+        
+#         logger.info("RecommendationService initialized")
+        
+#     def calculate_performance_metrics(
+#         self, 
+#         performance_history: List[Dict]
+#     ) -> Dict[str, float]:
+#         """Calculate normalized scores and identify patterns."""
+#         topic_performance = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_performance:
+#                 topic_performance[topic] = []
+#             topic_performance[topic].append(normalized_score)
+        
+#         # Average performance per topic
+#         topic_averages = {
+#             topic: np.mean(scores) 
+#             for topic, scores in topic_performance.items()
+#         }
+        
+#         return topic_averages
+    
+#     def identify_strengths_weaknesses(
+#         self, 
+#         topic_averages: Dict[str, float]
+#     ) -> Tuple[List[str], List[str]]:
+#         """Classify topics into strengths and weaknesses."""
+#         strengths = [
+#             topic for topic, score in topic_averages.items() 
+#             if score >= self.strong_threshold
+#         ]
+        
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items() 
+#             if score < self.weak_threshold
+#         ]
+        
+#         return strengths, weaknesses
+    
+#     def detect_trends(
+#         self, 
+#         performance_history: List[Dict]
+#     ) -> Dict[str, str]:
+#         """Detect if student is improving, declining, or stable."""
+#         topic_trends = {}
+#         topic_scores_timeline = {}
+        
+#         # Group scores by topic in chronological order
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_scores_timeline:
+#                 topic_scores_timeline[topic] = []
+#             topic_scores_timeline[topic].append(normalized_score)
+        
+#         # Analyze trend for each topic
+#         for topic, scores in topic_scores_timeline.items():
+#             if len(scores) < 2:
+#                 topic_trends[topic] = "insufficient_data"
+#                 continue
+                
+#             # Simple linear trend detection
+#             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
+#             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
+            
+#             if recent_avg > early_avg + 0.1:
+#                 topic_trends[topic] = "improving"
+#             elif recent_avg < early_avg - 0.1:
+#                 topic_trends[topic] = "declining"
+#             else:
+#                 topic_trends[topic] = "stable"
+        
+#         return topic_trends
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[str],
+#         strengths: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float]
+#     ) -> Dict[str, any]:
+#         """Create a prioritized study plan."""
+#         # Priority 1: Declining topics (urgent)
+#         declining_topics = [
+#             topic for topic, trend in trends.items() 
+#             if trend == "declining"
+#         ]
+        
+#         # Priority 2: Weak topics (needs improvement)
+#         improvement_topics = [
+#             topic for topic in weaknesses 
+#             if topic not in declining_topics
+#         ]
+        
+#         # Priority 3: Build on strengths (next level)
+#         advancement_topics = [
+#             topic for topic in strengths
+#             if trends.get(topic) == "improving"
+#         ]
+        
+#         study_plan = {
+#             "urgent_review": {
+#                 "topics": declining_topics,
+#                 "reason": "Performance is declining - immediate attention needed",
+#                 "suggested_hours": len(declining_topics) * 3
+#             },
+#             "skill_building": {
+#                 "topics": improvement_topics,
+#                 "reason": "Below mastery threshold - foundational work needed",
+#                 "suggested_hours": len(improvement_topics) * 2
+#             },
+#             "advancement": {
+#                 "topics": advancement_topics,
+#                 "reason": "Strong foundation - ready for advanced concepts",
+#                 "suggested_hours": len(advancement_topics) * 1.5
+#             }
+#         }
+        
+#         return study_plan
+    
+#     async def generate_llm_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         study_plan: Dict[str, any]
+#     ) -> Tuple[str, str]:
+#         """Use LLM to generate personalized explanation and motivation."""
+        
+#         # Check if API key is available
+#         if not self.groq_api_key:
+#             logger.warning("GROQ_API_KEY not available, using fallback messages")
+#             explanation = "Your performance data shows areas of strength and opportunities for growth."
+#             motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
+#             return explanation, motivation
+        
+#         system_prompt = "You are a supportive TVET instructor. Be encouraging, specific, and practical. Focus on trades skills like wiring and plumbing."
+        
+#         user_prompt = f"""Student Performance Summary:
+# - Strong Topics: {', '.join(strengths) if strengths else 'None yet'}
+# - Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'None'}
+# - Performance Trends: {trends}
+# - Topic Scores: {topic_averages}
+
+# Study Plan:
+# {study_plan}
+
+# Generate two parts:
+# 1. A brief explanation (2-3 sentences) of their learning pattern
+# 2. An encouraging motivational message (2-3 sentences) specific to their situation
+
+# Separate the two parts with a blank line."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 300
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+                    
+#                     # Split into explanation and motivation
+#                     parts = llm_output.split("\n\n")
+#                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
+#                     motivation = parts[1].strip() if len(parts) > 1 else "Keep pushing forward! Every expert was once a beginner."
+                    
+#                     return explanation, motivation
+#                 else:
+#                     logger.error(f"Groq API error: {response.status_code} - {response.text}")
+#                     raise Exception(f"Groq returned status {response.status_code}")
+            
+#         except Exception as e:
+#             logger.error(f"LLM generation failed: {e}")
+#             # Fallback messages
+#             explanation = "Your performance data shows areas of strength and opportunities for growth."
+#             motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
+#             return explanation, motivation
+    
+
+#     async def generate_recommendations(self,performance_history: List[Dict],topic_scores: Dict[str, float]) -> Dict[str, any]:
+#         """
+#         Generate recommendations per module and an overall summary.
+#         """
+
+#         module_recommendations = await self.generate_module_recommendations(
+#         performance_history,
+#         topic_scores
+#     )
+
+#         all_strengths = []
+#         all_weaknesses = []
+
+#         for module in module_recommendations.values():
+#             all_strengths.extend(module["strengths"])
+#             all_weaknesses.extend(module["weaknesses"])
+
+#         return {
+#         "module_recommendations": module_recommendations,
+#         "overall_summary": {
+#             "total_modules": len(module_recommendations),
+#             "common_strengths": list(set(all_strengths)),
+#             "common_weaknesses": list(set(all_weaknesses))
+#         }
+#     }
+
+
+#     def track_improvement(self,student_id: str,current_metrics: Dict[str, float],previous_metrics: Optional[Dict[str, float]] = None) -> Dict[str, any]:
+#         """
+#         Track student improvement over time.
+#         Compares current performance against previous assessment.
+#         """
+#         if not previous_metrics:
+#             return {
+#                 "student_id": student_id,
+#                 "baseline_established": True,
+#                 "message": "Baseline performance recorded. Next assessment will show progress.",
+#                 "current_metrics": current_metrics,
+#                 "timestamp": datetime.now().isoformat()
+#             }
+        
+#         improvements = {}
+#         declines = {}
+#         stable = {}
+        
+#         for topic, current_score in current_metrics.items():
+#             if topic in previous_metrics:
+#                 previous_score = previous_metrics[topic]
+#                 change = current_score - previous_score
+#                 change_percent = (change / previous_score * 100) if previous_score > 0 else 0
+                
+#                 if change > 0.05:  # 5% improvement threshold
+#                     improvements[topic] = {
+#                         "previous": round(previous_score, 2),
+#                         "current": round(current_score, 2),
+#                         "change": round(change, 2),
+#                         "change_percent": round(change_percent, 1)
+#                     }
+#                 elif change < -0.05:  # 5% decline threshold
+#                     declines[topic] = {
+#                         "previous": round(previous_score, 2),
+#                         "current": round(current_score, 2),
+#                         "change": round(change, 2),
+#                         "change_percent": round(change_percent, 1)
+#                     }
+#                 else:
+#                     stable[topic] = {
+#                         "score": round(current_score, 2)
+#                     }
+        
+#         # New topics that weren't in previous assessment
+#         new_topics = {
+#             topic: round(score, 2) 
+#             for topic, score in current_metrics.items() 
+#             if topic not in previous_metrics
+#         }
+        
+#         # Overall progress indicator
+#         if previous_metrics:
+#             avg_previous = np.mean(list(previous_metrics.values()))
+#             avg_current = np.mean(list(current_metrics.values()))
+#             overall_change = avg_current - avg_previous
+            
+#             if overall_change > 0.05:
+#                 progress_status = "improving"
+#             elif overall_change < -0.05:
+#                 progress_status = "declining"
+#             else:
+#                 progress_status = "stable"
+#         else:
+#             progress_status = "baseline"
+        
+#         return {
+#             "student_id": student_id,
+#             "timestamp": datetime.now().isoformat(),
+#             "progress_status": progress_status,
+#             "improvements": improvements,
+#             "declines": declines,
+#             "stable_topics": stable,
+#             "new_topics": new_topics,
+#             "summary": {
+#                 "topics_improved": len(improvements),
+#                 "topics_declined": len(declines),
+#                 "topics_stable": len(stable),
+#                 "new_topics_count": len(new_topics)
+#             }
+#         }
+
+#     def group_performance_by_module(self,performance_history: List[Dict]) -> Dict[str, List[Dict]]:
+#         """
+#         Group performance records by module.
+#         """
+#         modules = {}
+
+#         for record in performance_history:
+#             module_id = record.get("module_id")
+#             if not module_id:
+#                 continue
+
+#             modules.setdefault(module_id, []).append(record)
+
+#         return modules
+
+#     async def generate_module_recommendations(self,performance_history: List[Dict],topic_scores: Optional[Dict[str, float]] = None) -> Dict[str, Dict]:
+#         """
+#         Generate recommendations per module taken by the student.
+#         """
+#         module_groups = self.group_performance_by_module(performance_history)
+#         module_results = {}
+
+#         for module_id, records in module_groups.items():
+#         # Ensure chronological order for trend detection
+#             records = sorted(
+#             records,
+#             key=lambda r: r.get("timestamp", "")
+#             )
+
+#             topic_averages = self.calculate_performance_metrics(records)
+
+#             if topic_scores:
+#                 normalized_scores = {
+#                 k: min(v, 1.0) for k, v in topic_scores.items()
+#             }
+#             topic_averages.update(normalized_scores)
+
+#             strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+#             trends = self.detect_trends(records)
+
+#             study_plan = self.generate_study_plan(
+#             weaknesses,
+#             strengths,
+#             trends,
+#             topic_averages
+#         )
+
+#             explanation, motivation = await self.generate_llm_insights(
+#             strengths,
+#             weaknesses,
+#             trends,
+#             topic_averages,
+#             study_plan
+#         )
+
+#             module_results[module_id] = {
+#             "module_id": module_id,
+#             "strengths": strengths,
+#             "weaknesses": weaknesses,
+#             "trends": trends,
+#             "study_plan": study_plan,
+#             "topic_recommendations": (
+#                 study_plan["urgent_review"]["topics"]
+#                 + study_plan["skill_building"]["topics"]
+#                 + study_plan["advancement"]["topics"]
+#             ),
+#             "llm_explanation": explanation,
+#             "motivational_message": motivation
+#         }
+
+#         return module_results
+
+
+
+#     def generate_report_data(
+#         self,
+#         student_id: str,
+#         student_name: str,
+#         recommendations: Dict[str, any],
+#         improvement_tracking: Optional[Dict[str, any]] = None
+#     ) -> Dict[str, any]:
+#         """
+#         Generate structured report data for export.
+#         """
+#         report = {
+#             "report_metadata": {
+#                 "student_id": student_id,
+#                 "student_name": student_name,
+#                 "generated_at": datetime.now().isoformat(),
+#                 "report_type": "Performance Analysis & Recommendations"
+#             },
+#             "performance_summary": {
+#                 "strengths": recommendations.get("strengths", []),
+#                 "areas_for_improvement": recommendations["study_plan"]["skill_building"]["topics"],
+#                 "urgent_attention_needed": recommendations["study_plan"]["urgent_review"]["topics"],
+#                 "ready_for_advancement": recommendations["study_plan"]["advancement"]["topics"]
+#             },
+#             "detailed_analysis": {
+#                 "topic_trends": recommendations.get("trends", {}),
+#                 "llm_insights": {
+#                     "explanation": recommendations.get("llm_explanation", ""),
+#                     "motivation": recommendations.get("motivational_message", "")
+#                 }
+#             },
+#             "study_plan": recommendations.get("study_plan", {}),
+#             "recommended_actions": recommendations.get("topic_recommendations", [])
+#         }
+        
+#         # Add improvement tracking if available
+#         if improvement_tracking:
+#             report["progress_tracking"] = improvement_tracking
+        
+#         return report
+    
+
+
+
+
+# VERSION 4
+
+
+
+
+
+
+
+# """
+# Recommendation Service - FIXED VERSION
+# AI-powered personalized learning recommendations
+# """
+
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """AI-powered recommendation system for TVET students."""
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning("⚠️ GROQAPI_KEY not found. LLM insights unavailable.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+#         self.weak_threshold = 0.6
+#         self.strong_threshold = 0.8
+        
+#         logger.info("✅ RecommendationService initialized")
+    
+#     def calculate_performance_metrics(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, float]:
+#         """Calculate normalized scores per topic."""
+#         topic_performance = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_performance:
+#                 topic_performance[topic] = []
+#             topic_performance[topic].append(normalized_score)
+        
+#         topic_averages = {
+#             topic: np.mean(scores)
+#             for topic, scores in topic_performance.items()
+#         }
+        
+#         return topic_averages
+    
+#     def identify_strengths_weaknesses(
+#         self,
+#         topic_averages: Dict[str, float]
+#     ) -> Tuple[List[str], List[str]]:
+#         """Classify topics into strengths and weaknesses."""
+#         strengths = [
+#             topic for topic, score in topic_averages.items()
+#             if score >= self.strong_threshold
+#         ]
+        
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items()
+#             if score < self.weak_threshold
+#         ]
+        
+#         return strengths, weaknesses
+    
+#     def detect_trends(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, str]:
+#         """Detect if student is improving, declining, or stable."""
+#         topic_trends = {}
+#         topic_scores_timeline = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"]
+            
+#             if topic not in topic_scores_timeline:
+#                 topic_scores_timeline[topic] = []
+#             topic_scores_timeline[topic].append(normalized_score)
+        
+#         for topic, scores in topic_scores_timeline.items():
+#             if len(scores) < 2:
+#                 topic_trends[topic] = "insufficient_data"
+#                 continue
+            
+#             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
+#             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
+            
+#             if recent_avg > early_avg + 0.1:
+#                 topic_trends[topic] = "improving"
+#             elif recent_avg < early_avg - 0.1:
+#                 topic_trends[topic] = "declining"
+#             else:
+#                 topic_trends[topic] = "stable"
+        
+#         return topic_trends
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[str],
+#         strengths: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float]
+#     ) -> Dict:
+#         """Create prioritized study plan."""
+#         declining_topics = [
+#             topic for topic, trend in trends.items()
+#             if trend == "declining"
+#         ]
+        
+#         improvement_topics = [
+#             topic for topic in weaknesses
+#             if topic not in declining_topics
+#         ]
+        
+#         advancement_topics = [
+#             topic for topic in strengths
+#             if trends.get(topic) == "improving"
+#         ]
+        
+#         return {
+#             "urgent_review": {
+#                 "topics": declining_topics,
+#                 "reason": "Performance is declining - immediate attention needed",
+#                 "suggested_hours": len(declining_topics) * 3
+#             },
+#             "skill_building": {
+#                 "topics": improvement_topics,
+#                 "reason": "Below mastery - foundational work needed",
+#                 "suggested_hours": len(improvement_topics) * 2
+#             },
+#             "advancement": {
+#                 "topics": advancement_topics,
+#                 "reason": "Strong foundation - ready for advanced concepts",
+#                 "suggested_hours": len(advancement_topics) * 1.5
+#             }
+#         }
+    
+#     async def generate_llm_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         study_plan: Dict
+#     ) -> Tuple[str, str]:
+#         """Generate personalized explanation and motivation using LLM."""
+        
+#         if not self.groq_api_key:
+#             logger.warning("⚠️ API key unavailable, using fallback")
+#             return self._fallback_insights(strengths, weaknesses)
+        
+#         system_prompt = "You are a supportive TVET instructor. Be encouraging and specific."
+        
+#         user_prompt = f"""Student Performance Summary:
+# - Strong Topics: {', '.join(strengths) if strengths else 'None yet'}
+# - Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'None'}
+# - Trends: {trends}
+# - Scores: {topic_averages}
+
+# Study Plan: {study_plan}
+
+# Generate:
+# 1. Brief explanation (2-3 sentences) of their learning pattern
+# 2. Encouraging motivational message (2-3 sentences)
+
+# Separate with a blank line."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 300
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"]
+                    
+#                     parts = llm_output.split("\n\n")
+#                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
+#                     motivation = parts[1].strip() if len(parts) > 1 else "Keep pushing forward!"
+                    
+#                     return explanation, motivation
+#                 else:
+#                     logger.error(f"❌ Groq API error: {response.status_code}")
+#                     return self._fallback_insights(strengths, weaknesses)
+            
+#         except Exception as e:
+#             logger.error(f"❌ LLM generation failed: {e}")
+#             return self._fallback_insights(strengths, weaknesses)
+    
+#     def _fallback_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str]
+#     ) -> Tuple[str, str]:
+#         """Fallback insights when LLM unavailable."""
+#         if strengths and weaknesses:
+#             explanation = f"You're showing strength in {len(strengths)} areas while working on {len(weaknesses)} topics."
+#             motivation = "Balance your practice between reinforcing strengths and improving weak areas!"
+#         elif strengths:
+#             explanation = f"Great progress! You're performing well across {len(strengths)} topics."
+#             motivation = "Keep up the excellent work and challenge yourself with advanced material!"
+#         elif weaknesses:
+#             explanation = f"You're working on {len(weaknesses)} challenging topics."
+#             motivation = "Stay focused! Consistent practice will lead to improvement."
+#         else:
+#             explanation = "Building your foundation in new topics."
+#             motivation = "Every expert was once a beginner. Keep learning!"
+        
+#         return explanation, motivation
+    
+#     async def generate_recommendations(self,performance_history: List[Dict],topic_scores: Optional[Dict[str, float]] = None) -> Dict:
+#         """
+#         Generate comprehensive recommendations.
+        
+#         Args:
+#             performance_history: List of {topic, score, max_score} records
+#             topic_scores: Optional dict of topic -> normalized score (0-1)
+        
+#         Returns:
+#             Complete recommendation result
+#         """
+#         try:
+#             # Calculate metrics
+#             topic_averages = self.calculate_performance_metrics(performance_history)
+            
+#             # Merge with provided topic_scores if available
+#             if topic_scores:
+#                 normalized_scores = {k: min(v, 1.0) for k, v in topic_scores.items()}
+#                 topic_averages.update(normalized_scores)
+            
+#             # Identify strengths/weaknesses
+#             strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+            
+#             # Detect trends
+#             trends = self.detect_trends(performance_history)
+            
+#             # Generate study plan
+#             study_plan = self.generate_study_plan(
+#                 weaknesses, strengths, trends, topic_averages
+#             )
+            
+#             # Get LLM insights
+#             explanation, motivation = await self.generate_llm_insights(
+#                 strengths, weaknesses, trends, topic_averages, study_plan
+#             )
+            
+#             # Compile recommendations
+#             topic_recommendations = (
+#                 study_plan["urgent_review"]["topics"] +
+#                 study_plan["skill_building"]["topics"] +
+#                 study_plan["advancement"]["topics"]
+#             )
+            
+#             return {
+#                 "topic_recommendations": topic_recommendations,
+#                 "study_plan": study_plan,
+#                 "strengths": strengths,
+#                 "trends": trends,
+#                 "motivational_message": motivation,
+#                 "llm_explanation": explanation
+#             }
+            
+#         except Exception as e:
+#             logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+# VERSION 5
+
+
+
+
+
+
+
+# """
+# Recommendation Service - PRODUCTION READY
+# AI-powered personalized learning recommendations for TVET students
+# Location: app/services/recommendation_service.py
+# """
+
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     AI-powered recommendation system that analyzes student performance
+#     and generates personalized learning paths.
+#     """
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning("GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         # Performance thresholds
+#         self.weak_threshold = 0.60      # Below 60% = needs work
+#         self.strong_threshold = 0.80    # Above 80% = strength
+        
+#         logger.info("RecommendationService initialized")
+    
+#     def calculate_performance_metrics(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, float]:
+#         """
+#         Calculate normalized performance scores per topic.
+        
+#         Args:
+#             performance_history: List of {topic, score, max_score} records
+            
+#         Returns:
+#             Dict mapping topic -> average normalized score (0-1)
+#         """
+#         topic_performance = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
+            
+#             if topic not in topic_performance:
+#                 topic_performance[topic] = []
+#             topic_performance[topic].append(normalized_score)
+        
+#         # Calculate average per topic
+#         topic_averages = {
+#             topic: np.mean(scores)
+#             for topic, scores in topic_performance.items()
+#         }
+        
+#         return topic_averages
+    
+#     def identify_strengths_weaknesses(
+#         self,
+#         topic_averages: Dict[str, float]
+#     ) -> Tuple[List[str], List[str]]:
+#         """
+#         Classify topics into strengths and weaknesses.
+        
+#         Args:
+#             topic_averages: Dict of topic -> normalized score
+            
+#         Returns:
+#             (strengths, weaknesses) tuple of topic lists
+#         """
+#         strengths = [
+#             topic for topic, score in topic_averages.items()
+#             if score >= self.strong_threshold
+#         ]
+        
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items()
+#             if score < self.weak_threshold
+#         ]
+        
+#         return strengths, weaknesses
+    
+#     def detect_trends(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, str]:
+#         """
+#         Detect performance trends: improving, declining, or stable.
+        
+#         Args:
+#             performance_history: Chronologically ordered performance records
+            
+#         Returns:
+#             Dict mapping topic -> trend ("improving"|"declining"|"stable"|"insufficient_data")
+#         """
+#         topic_trends = {}
+#         topic_scores_timeline = {}
+        
+#         # Group scores by topic chronologically
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
+            
+#             if topic not in topic_scores_timeline:
+#                 topic_scores_timeline[topic] = []
+#             topic_scores_timeline[topic].append(normalized_score)
+        
+#         # Analyze trend for each topic
+#         for topic, scores in topic_scores_timeline.items():
+#             if len(scores) < 2:
+#                 topic_trends[topic] = "insufficient_data"
+#                 continue
+            
+#             # Compare recent performance vs early performance
+#             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
+#             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
+            
+#             # 10% threshold for significant change
+#             if recent_avg > early_avg + 0.1:
+#                 topic_trends[topic] = "improving"
+#             elif recent_avg < early_avg - 0.1:
+#                 topic_trends[topic] = "declining"
+#             else:
+#                 topic_trends[topic] = "stable"
+        
+#         return topic_trends
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[str],
+#         strengths: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float]
+#     ) -> Dict:
+#         """
+#         Create a prioritized study plan.
+        
+#         Returns:
+#             Study plan with urgent_review, skill_building, and advancement sections
+#         """
+#         # Priority 1: Declining topics (highest urgency)
+#         declining_topics = [
+#             topic for topic, trend in trends.items()
+#             if trend == "declining"
+#         ]
+        
+#         # Priority 2: Weak topics not yet declining
+#         improvement_topics = [
+#             topic for topic in weaknesses
+#             if topic not in declining_topics
+#         ]
+        
+#         # Priority 3: Strong topics showing improvement
+#         advancement_topics = [
+#             topic for topic in strengths
+#             if trends.get(topic) == "improving"
+#         ]
+        
+#         return {
+#             "urgent_review": {
+#                 "topics": declining_topics,
+#                 "reason": "Performance is declining - immediate attention needed",
+#                 "suggested_hours": len(declining_topics) * 3
+#             },
+#             "skill_building": {
+#                 "topics": improvement_topics,
+#                 "reason": "Below mastery threshold - foundational work needed",
+#                 "suggested_hours": len(improvement_topics) * 2
+#             },
+#             "advancement": {
+#                 "topics": advancement_topics,
+#                 "reason": "Strong foundation - ready for advanced concepts",
+#                 "suggested_hours": len(advancement_topics) * 1.5
+#             }
+#         }
+    
+#     async def generate_llm_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         study_plan: Dict
+#     ) -> Tuple[str, str]:
+#         """
+#         Generate personalized explanation and motivation using LLM.
+        
+#         Returns:
+#             (explanation, motivational_message) tuple
+#         """
+#         if not self.groq_api_key:
+#             logger.warning(" GROQ_API_KEY unavailable, using fallback")
+#             return self._fallback_insights(strengths, weaknesses)
+        
+#         system_prompt = """You are a supportive TVET instructor providing personalized feedback.
+# Be encouraging, specific, and practical. Focus on technical/vocational skills."""
+        
+#         user_prompt = f"""Student Performance Analysis:
+# - Strong Topics: {', '.join(strengths) if strengths else 'Still building foundation'}
+# - Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'Good progress across topics'}
+# - Performance Trends: {trends}
+# - Topic Scores: {topic_averages}
+
+# Study Plan Summary:
+# - Urgent Review: {', '.join(study_plan['urgent_review']['topics']) if study_plan['urgent_review']['topics'] else 'None'}
+# - Skill Building: {', '.join(study_plan['skill_building']['topics']) if study_plan['skill_building']['topics'] else 'None'}
+# - Ready to Advance: {', '.join(study_plan['advancement']['topics']) if study_plan['advancement']['topics'] else 'None'}
+
+# Generate TWO short paragraphs (2-3 sentences each):
+# 1. EXPLANATION: Analyze their learning pattern and what it means
+# 2. MOTIVATION: Encouraging message specific to their situation
+
+# Separate the paragraphs with a blank line."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 300
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"].strip()
+                    
+#                     # Split into explanation and motivation
+#                     parts = llm_output.split("\n\n")
+#                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
+#                     motivation = parts[1].strip() if len(parts) > 1 else "Keep up the great work!"
+                    
+#                     return explanation, motivation
+#                 else:
+#                     logger.error(f"Groq API error: {response.status_code}")
+#                     return self._fallback_insights(strengths, weaknesses)
+            
+#         except Exception as e:
+#             logger.error(f"LLM insights generation failed: {e}")
+#             return self._fallback_insights(strengths, weaknesses)
+    
+#     def _fallback_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str]
+#     ) -> Tuple[str, str]:
+#         """Fallback insights when LLM is unavailable."""
+#         if strengths and weaknesses:
+#             explanation = (
+#                 f"You're showing strong performance in {len(strengths)} areas "
+#                 f"while working to improve {len(weaknesses)} topics. "
+#                 "This balanced progress shows you're engaging with the material effectively."
+#             )
+#             motivation = (
+#                 "Keep balancing your study time between reinforcing your strengths "
+#                 "and building skills in challenging areas. Consistent practice is key!"
+#             )
+#         elif strengths and not weaknesses:
+#             explanation = (
+#                 f"Excellent work! You're performing well across {len(strengths)} topics, "
+#                 "demonstrating strong mastery of the fundamentals."
+#             )
+#             motivation = (
+#                 "You're ready to challenge yourself with more advanced material. "
+#                 "Keep up this outstanding momentum!"
+#             )
+#         elif weaknesses and not strengths:
+#             explanation = (
+#                 f"You're currently working on {len(weaknesses)} challenging topics. "
+#                 "Building these foundational skills takes focused practice and patience."
+#             )
+#             motivation = (
+#                 "Stay committed to your learning plan. Every expert started where you are now. "
+#                 "Consistent effort will lead to improvement!"
+#             )
+#         else:
+#             explanation = (
+#                 "You're building your foundation in these technical topics. "
+#                 "Early stages of learning require time and repetition."
+#             )
+#             motivation = (
+#                 "Keep practicing! Each quiz helps build your skills. "
+#                 "Progress comes with consistent effort."
+#             )
+        
+#         return explanation, motivation
+    
+#     async def generate_recommendations(
+#         self,
+#         performance_history: List[Dict],
+#         topic_scores: Optional[Dict[str, float]] = None
+#     ) -> Dict:
+#         """
+#         Generate comprehensive personalized recommendations.
+        
+#         Args:
+#             performance_history: List of performance records with topic, score, max_score
+#             topic_scores: Optional dict of topic -> normalized score (0-1)
+            
+#         Returns:
+#             Complete recommendation package with study plan, insights, and trends
+#         """
+#         try:
+#             logger.info(f"Generating recommendations from {len(performance_history)} records")
+            
+#             # Calculate performance metrics
+#             topic_averages = self.calculate_performance_metrics(performance_history)
+            
+#             # Merge with provided topic scores if available
+#             if topic_scores:
+#                 normalized_scores = {
+#                     k: min(max(v, 0.0), 1.0)  # Clamp to 0-1
+#                     for k, v in topic_scores.items()
+#                 }
+#                 topic_averages.update(normalized_scores)
+            
+#             # Identify strengths and weaknesses
+#             strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+            
+#             # Detect performance trends
+#             trends = self.detect_trends(performance_history)
+            
+#             # Generate study plan
+#             study_plan = self.generate_study_plan(
+#                 weaknesses, strengths, trends, topic_averages
+#             )
+            
+#             # Generate AI insights
+#             explanation, motivation = await self.generate_llm_insights(
+#                 strengths, weaknesses, trends, topic_averages, study_plan
+#             )
+            
+#             # Compile all recommendations
+#             topic_recommendations = (
+#                 study_plan["urgent_review"]["topics"] +
+#                 study_plan["skill_building"]["topics"] +
+#                 study_plan["advancement"]["topics"]
+#             )
+            
+#             result = {
+#                 "topic_recommendations": topic_recommendations,
+#                 "study_plan": study_plan,
+#                 "strengths": strengths,
+#                 "trends": trends,
+#                 "motivational_message": motivation,
+#                 "llm_explanation": explanation
+#             }
+            
+#             logger.info(
+#                 f"Recommendations generated: {len(topic_recommendations)} topics, "
+#                 f"{len(strengths)} strengths, {len(weaknesses)} areas to improve"
+#             )
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+
+
+# VERSION 6
+
+
+
+
+
+
+
+
+"""
+Enhanced Recommendation Service 
+Analyzes actual student mistakes and provides specific, actionable recommendations
+Location: app/services/recommendation_service.py
+"""
+
 import numpy as np
 from typing import List, Dict, Tuple, Optional
-from sklearn.preprocessing import MinMaxScaler
 import os
 import httpx
 from dotenv import load_dotenv
 from app.core.logging_config import logger
 from datetime import datetime
-import json
-# from app.services.document_service import DocumentProcessingService
+from collections import Counter
 
-# Load environment variables
 load_dotenv()
 
 
 class RecommendationService:
     """
-    AI-powered recommendation system for TVET students.
-    Analyzes performance to suggest personalized learning paths.
+    Advanced recommendation system that analyzes:
+    1. Overall performance trends
+    2. Specific question failures
+    3. Concept-level weaknesses
+    4. Learning patterns
     """
     
     def __init__(self):
-        # Load API key from environment
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
+        self.groq_api_key = os.getenv("GROQAPI_KEY")
         if not self.groq_api_key:
-            logger.warning("GROQ_API_KEY not found. LLM-powered insights will not be available.")
+            logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
         
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")  # Fast & free on Groq
-        self.weak_threshold = 0.6  # Below 60% = needs improvement
-        self.strong_threshold = 0.8  # Above 80% = strength
+        self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
         
-        # Initialize document service
-        try:
-            self.doc_service = DocumentProcessingService()
-        except Exception as e:
-            logger.warning(f"Document service initialization failed: {e}")
-            self.doc_service = None
+        # Performance thresholds
+        self.weak_threshold = 0.60
+        self.strong_threshold = 0.80
         
-        logger.info("RecommendationService initialized")
+        logger.info("Enhanced RecommendationService initialized")
+    
+    def analyze_question_failures(
+        self,
+        question_results: List[Dict]
+    ) -> Dict:
+        """
+        Analyze specific questions that were answered incorrectly.
         
+        Args:
+            question_results: List of graded question results
+            
+        Returns:
+            Detailed failure analysis with specific recommendations
+        """
+        failures = {
+            "failed_questions": [],
+            "weak_question_types": [],
+            "concepts_to_review": [],
+            "specific_improvements": []
+        }
+        
+        # Track performance by question type
+        type_performance = {}
+        
+        for result in question_results:
+            q_type = result["question_type"]
+            is_correct = result.get("is_correct")
+            awarded = result["awarded_points"]
+            max_points = result["max_points"]
+            
+            # Track by type
+            if q_type not in type_performance:
+                type_performance[q_type] = {"correct": 0, "total": 0, "points": 0, "max": 0}
+            
+            type_performance[q_type]["total"] += 1
+            type_performance[q_type]["points"] += awarded
+            type_performance[q_type]["max"] += max_points
+            
+            # Identify failures
+            if is_correct is False or (is_correct is None and awarded < max_points * 0.7):
+                failures["failed_questions"].append({
+                    "question_id": result["question_id"],
+                    "type": q_type,
+                    "points_lost": max_points - awarded,
+                    "feedback": result.get("feedback", ""),
+                    "improvements": result.get("improvements", [])
+                })
+                
+                # Extract specific concepts from improvements
+                if result.get("improvements"):
+                    failures["concepts_to_review"].extend(result["improvements"])
+        
+        # Identify weak question types
+        for q_type, stats in type_performance.items():
+            percentage = (stats["points"] / stats["max"] * 100) if stats["max"] > 0 else 0
+            if percentage < 70:
+                failures["weak_question_types"].append({
+                    "type": q_type,
+                    "percentage": round(percentage, 1),
+                    "questions_attempted": stats["total"]
+                })
+        
+        # Generate specific improvements
+        failures["specific_improvements"] = self._generate_specific_improvements(
+            failures["failed_questions"],
+            failures["weak_question_types"]
+        )
+        
+        # Deduplicate concepts
+        failures["concepts_to_review"] = list(set(failures["concepts_to_review"]))
+        
+        return failures
+    
+    def _generate_specific_improvements(
+        self,
+        failed_questions: List[Dict],
+        weak_types: List[Dict]
+    ) -> List[str]:
+        """Generate actionable improvement recommendations."""
+        improvements = []
+        
+        # Recommendations based on failed questions
+        if failed_questions:
+            improvements.append(
+                f"Review the {len(failed_questions)} questions you missed - "
+                "understanding your mistakes is key to improvement"
+            )
+            
+            # Group by type
+            type_counts = Counter(q["type"] for q in failed_questions)
+            for q_type, count in type_counts.most_common(2):
+                type_name = self._humanize_question_type(q_type)
+                improvements.append(
+                    f"Practice more {type_name} questions - "
+                    f"you missed {count} in this area"
+                )
+        
+        # Recommendations based on weak types
+        for weak in weak_types:
+            type_name = self._humanize_question_type(weak["type"])
+            improvements.append(
+                f"Strengthen your {type_name} skills - "
+                f"currently at {weak['percentage']:.0f}%"
+            )
+        
+        return improvements
+    
+    def _humanize_question_type(self, q_type: str) -> str:
+        """Convert question type codes to readable names."""
+        type_map = {
+            "mcq": "multiple choice",
+            "multiple_choice": "multiple choice",
+            "true_false": "true/false",
+            "short_answer": "short answer",
+            "essay": "essay",
+            "practical": "practical"
+        }
+        return type_map.get(q_type.lower(), q_type)
+    
     def calculate_performance_metrics(
-        self, 
+        self,
         performance_history: List[Dict]
     ) -> Dict[str, float]:
-        """Calculate normalized scores and identify patterns."""
+        """Calculate normalized performance scores per topic."""
         topic_performance = {}
         
         for record in performance_history:
             topic = record["topic"]
-            normalized_score = record["score"] / record["max_score"]
+            normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
             
             if topic not in topic_performance:
                 topic_performance[topic] = []
             topic_performance[topic].append(normalized_score)
         
-        # Average performance per topic
         topic_averages = {
-            topic: np.mean(scores) 
+            topic: np.mean(scores)
             for topic, scores in topic_performance.items()
         }
         
         return topic_averages
     
     def identify_strengths_weaknesses(
-        self, 
+        self,
         topic_averages: Dict[str, float]
     ) -> Tuple[List[str], List[str]]:
         """Classify topics into strengths and weaknesses."""
         strengths = [
-            topic for topic, score in topic_averages.items() 
+            topic for topic, score in topic_averages.items()
             if score >= self.strong_threshold
         ]
         
         weaknesses = [
-            topic for topic, score in topic_averages.items() 
+            topic for topic, score in topic_averages.items()
             if score < self.weak_threshold
         ]
         
         return strengths, weaknesses
     
     def detect_trends(
-        self, 
+        self,
         performance_history: List[Dict]
     ) -> Dict[str, str]:
-        """Detect if student is improving, declining, or stable."""
+        """Detect performance trends: improving, declining, or stable."""
         topic_trends = {}
         topic_scores_timeline = {}
         
-        # Group scores by topic in chronological order
         for record in performance_history:
             topic = record["topic"]
-            normalized_score = record["score"] / record["max_score"]
+            normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
             
             if topic not in topic_scores_timeline:
                 topic_scores_timeline[topic] = []
             topic_scores_timeline[topic].append(normalized_score)
         
-        # Analyze trend for each topic
         for topic, scores in topic_scores_timeline.items():
             if len(scores) < 2:
                 topic_trends[topic] = "insufficient_data"
                 continue
-                
-            # Simple linear trend detection
+            
             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
             
@@ -1682,44 +3447,74 @@ class RecommendationService:
         weaknesses: List[str],
         strengths: List[str],
         trends: Dict[str, str],
-        topic_averages: Dict[str, float]
-    ) -> Dict[str, any]:
-        """Create a prioritized study plan."""
-        # Priority 1: Declining topics (urgent)
+        topic_averages: Dict[str, float],
+        failure_analysis: Optional[Dict] = None
+    ) -> Dict:
+        """
+        Create a prioritized study plan based on:
+        1. Performance trends
+        2. Weak topics
+        3. Specific question failures
+        """
+        # Priority 1: Declining topics + failed concepts
         declining_topics = [
-            topic for topic, trend in trends.items() 
+            topic for topic, trend in trends.items()
             if trend == "declining"
         ]
         
-        # Priority 2: Weak topics (needs improvement)
+        # Priority 2: Weak topics
         improvement_topics = [
-            topic for topic in weaknesses 
+            topic for topic in weaknesses
             if topic not in declining_topics
         ]
         
-        # Priority 3: Build on strengths (next level)
+        # Priority 3: Strong topics showing improvement
         advancement_topics = [
             topic for topic in strengths
             if trends.get(topic) == "improving"
         ]
         
+        # Build study plan
         study_plan = {
             "urgent_review": {
                 "topics": declining_topics,
                 "reason": "Performance is declining - immediate attention needed",
-                "suggested_hours": len(declining_topics) * 3
+                "suggested_hours": len(declining_topics) * 3,
+                "specific_actions": []
             },
             "skill_building": {
                 "topics": improvement_topics,
                 "reason": "Below mastery threshold - foundational work needed",
-                "suggested_hours": len(improvement_topics) * 2
+                "suggested_hours": len(improvement_topics) * 2,
+                "specific_actions": []
             },
             "advancement": {
                 "topics": advancement_topics,
                 "reason": "Strong foundation - ready for advanced concepts",
-                "suggested_hours": len(advancement_topics) * 1.5
+                "suggested_hours": len(advancement_topics) * 1.5,
+                "specific_actions": []
             }
         }
+        
+        # Add specific actions from failure analysis
+        if failure_analysis:
+            # Add concept reviews to urgent/skill-building
+            concepts = failure_analysis.get("concepts_to_review", [])
+            if concepts:
+                if declining_topics:
+                    study_plan["urgent_review"]["specific_actions"].extend([
+                        f"Review: {concept}" for concept in concepts[:3]
+                    ])
+                else:
+                    study_plan["skill_building"]["specific_actions"].extend([
+                        f"Review: {concept}" for concept in concepts[:3]
+                    ])
+            
+            # Add question type practice
+            weak_types = failure_analysis.get("weak_question_types", [])
+            for weak in weak_types:
+                action = f"Practice {self._humanize_question_type(weak['type'])} questions"
+                study_plan["skill_building"]["specific_actions"].append(action)
         
         return study_plan
     
@@ -1729,33 +3524,48 @@ class RecommendationService:
         weaknesses: List[str],
         trends: Dict[str, str],
         topic_averages: Dict[str, float],
-        study_plan: Dict[str, any]
+        study_plan: Dict,
+        failure_analysis: Optional[Dict] = None
     ) -> Tuple[str, str]:
-        """Use LLM to generate personalized explanation and motivation."""
-        
-        # Check if API key is available
+        """Generate personalized insights based on actual performance."""
         if not self.groq_api_key:
-            logger.warning("GROQ_API_KEY not available, using fallback messages")
-            explanation = "Your performance data shows areas of strength and opportunities for growth."
-            motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
-            return explanation, motivation
+            return self._fallback_insights(strengths, weaknesses, failure_analysis)
         
-        system_prompt = "You are a supportive TVET instructor. Be encouraging, specific, and practical. Focus on trades skills like wiring and plumbing."
+        # Build context from failure analysis
+        failure_context = ""
+        if failure_analysis:
+            failed_count = len(failure_analysis.get("failed_questions", []))
+            concepts = failure_analysis.get("concepts_to_review", [])
+            weak_types = failure_analysis.get("weak_question_types", [])
+            
+            if failed_count > 0:
+                failure_context = f"""
+Recent Quiz Performance:
+- Questions missed: {failed_count}
+- Concepts needing review: {', '.join(concepts[:5]) if concepts else 'N/A'}
+- Question types to practice: {', '.join([t['type'] for t in weak_types]) if weak_types else 'N/A'}
+"""
         
-        user_prompt = f"""Student Performance Summary:
-- Strong Topics: {', '.join(strengths) if strengths else 'None yet'}
-- Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'None'}
-- Performance Trends: {trends}
-- Topic Scores: {topic_averages}
+        system_prompt = """You are a supportive TVET instructor providing personalized feedback.
+Be specific about what the student needs to work on based on their actual mistakes.
+Reference specific concepts they struggled with."""
+        
+        user_prompt = f"""Student Performance Analysis:
+- Strong Topics: {', '.join(strengths) if strengths else 'Still building foundation'}
+- Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'Good progress'}
+- Trends: {trends}
+{failure_context}
 
 Study Plan:
-{study_plan}
+- Urgent: {', '.join(study_plan['urgent_review']['topics']) if study_plan['urgent_review']['topics'] else 'None'}
+- Build Skills: {', '.join(study_plan['skill_building']['topics']) if study_plan['skill_building']['topics'] else 'None'}
+- Advance: {', '.join(study_plan['advancement']['topics']) if study_plan['advancement']['topics'] else 'None'}
 
-Generate two parts:
-1. A brief explanation (2-3 sentences) of their learning pattern
-2. An encouraging motivational message (2-3 sentences) specific to their situation
+Generate TWO paragraphs (2-3 sentences each):
+1. EXPLANATION: What patterns you see in their learning, specifically addressing their recent mistakes
+2. MOTIVATION: Encouraging message that acknowledges their challenges and provides hope
 
-Separate the two parts with a blank line."""
+Be specific - mention actual concepts they struggled with if available."""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -1772,256 +3582,146 @@ Separate the two parts with a blank line."""
                             {"role": "user", "content": user_prompt}
                         ],
                         "temperature": 0.7,
-                        "max_tokens": 300
+                        "max_tokens": 350
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    llm_output = result["choices"][0]["message"]["content"]
+                    llm_output = result["choices"][0]["message"]["content"].strip()
                     
-                    # Split into explanation and motivation
                     parts = llm_output.split("\n\n")
                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
-                    motivation = parts[1].strip() if len(parts) > 1 else "Keep pushing forward! Every expert was once a beginner."
+                    motivation = parts[1].strip() if len(parts) > 1 else "Keep working hard!"
                     
                     return explanation, motivation
                 else:
-                    logger.error(f"Groq API error: {response.status_code} - {response.text}")
-                    raise Exception(f"Groq returned status {response.status_code}")
+                    return self._fallback_insights(strengths, weaknesses, failure_analysis)
             
         except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
-            # Fallback messages
-            explanation = "Your performance data shows areas of strength and opportunities for growth."
-            motivation = "Stay focused on your goals. Practical skills take time and consistent effort!"
-            return explanation, motivation
+            logger.error(f"LLM insights failed: {e}")
+            return self._fallback_insights(strengths, weaknesses, failure_analysis)
+    
+    def _fallback_insights(
+        self,
+        strengths: List[str],
+        weaknesses: List[str],
+        failure_analysis: Optional[Dict] = None
+    ) -> Tuple[str, str]:
+        """Enhanced fallback with failure analysis."""
+        concepts_str = ""
+        if failure_analysis:
+            concepts = failure_analysis.get("concepts_to_review", [])
+            if concepts:
+                concepts_str = f" Pay special attention to: {', '.join(concepts[:3])}."
+        
+        if weaknesses:
+            explanation = (
+                f"Your recent quiz shows you need to strengthen your understanding in "
+                f"{len(weaknesses)} areas: {', '.join(weaknesses[:2])}."
+                f"{concepts_str} Focused practice on these concepts will help you improve."
+            )
+            motivation = (
+                "Every expert struggled with difficult concepts at first. "
+                "The fact that you're identifying where you need help shows you're on the right path. "
+                "Keep practicing these specific areas!"
+            )
+        elif strengths:
+            explanation = (
+                f"Excellent work! You're showing strong mastery in {len(strengths)} topics. "
+                "Your consistent performance demonstrates solid understanding."
+            )
+            motivation = (
+                "You're ready to tackle more advanced material. "
+                "Keep up this outstanding work!"
+            )
+        else:
+            explanation = "You're building your foundation in these topics."
+            motivation = "Stay consistent with your practice. Progress takes time!"
+        
+        return explanation, motivation
     
     async def generate_recommendations(
         self,
         performance_history: List[Dict],
-        topic_scores: Dict[str, float]
-    ) -> Dict[str, any]:
-        """Main method to generate comprehensive recommendations."""
-        
-        # Calculate metrics
-        topic_averages = self.calculate_performance_metrics(performance_history)
-        
-        # Merge with provided topic_scores if available
-        if topic_scores:
-            topic_averages.update(topic_scores)
-        
-        # Identify strengths and weaknesses
-        strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
-        
-        # Detect trends
-        trends = self.detect_trends(performance_history)
-        
-        # Generate study plan
-        study_plan = self.generate_study_plan(
-            weaknesses, strengths, trends, topic_averages
-        )
-        
-        # Get LLM insights
-        explanation, motivation = await self.generate_llm_insights(
-            strengths, weaknesses, trends, topic_averages, study_plan
-        )
-        
-        # Compile topic recommendations (prioritized list)
-        topic_recommendations = (
-            study_plan["urgent_review"]["topics"] +
-            study_plan["skill_building"]["topics"] +
-            study_plan["advancement"]["topics"]
-        )
-        
-        return {
-            "topic_recommendations": topic_recommendations,
-            "study_plan": study_plan,
-            "strengths": strengths,
-            "trends": trends,
-            "motivational_message": motivation,
-            "llm_explanation": explanation
-        }
-
-    def track_improvement(
-        self,
-        student_id: str,
-        current_metrics: Dict[str, float],
-        previous_metrics: Optional[Dict[str, float]] = None
-    ) -> Dict[str, any]:
-        """
-        Track student improvement over time.
-        Compares current performance against previous assessment.
-        """
-        if not previous_metrics:
-            return {
-                "student_id": student_id,
-                "baseline_established": True,
-                "message": "Baseline performance recorded. Next assessment will show progress.",
-                "current_metrics": current_metrics,
-                "timestamp": datetime.now().isoformat()
-            }
-        
-        improvements = {}
-        declines = {}
-        stable = {}
-        
-        for topic, current_score in current_metrics.items():
-            if topic in previous_metrics:
-                previous_score = previous_metrics[topic]
-                change = current_score - previous_score
-                change_percent = (change / previous_score * 100) if previous_score > 0 else 0
-                
-                if change > 0.05:  # 5% improvement threshold
-                    improvements[topic] = {
-                        "previous": round(previous_score, 2),
-                        "current": round(current_score, 2),
-                        "change": round(change, 2),
-                        "change_percent": round(change_percent, 1)
-                    }
-                elif change < -0.05:  # 5% decline threshold
-                    declines[topic] = {
-                        "previous": round(previous_score, 2),
-                        "current": round(current_score, 2),
-                        "change": round(change, 2),
-                        "change_percent": round(change_percent, 1)
-                    }
-                else:
-                    stable[topic] = {
-                        "score": round(current_score, 2)
-                    }
-        
-        # New topics that weren't in previous assessment
-        new_topics = {
-            topic: round(score, 2) 
-            for topic, score in current_metrics.items() 
-            if topic not in previous_metrics
-        }
-        
-        # Overall progress indicator
-        if previous_metrics:
-            avg_previous = np.mean(list(previous_metrics.values()))
-            avg_current = np.mean(list(current_metrics.values()))
-            overall_change = avg_current - avg_previous
-            
-            if overall_change > 0.05:
-                progress_status = "improving"
-            elif overall_change < -0.05:
-                progress_status = "declining"
-            else:
-                progress_status = "stable"
-        else:
-            progress_status = "baseline"
-        
-        return {
-            "student_id": student_id,
-            "timestamp": datetime.now().isoformat(),
-            "progress_status": progress_status,
-            "improvements": improvements,
-            "declines": declines,
-            "stable_topics": stable,
-            "new_topics": new_topics,
-            "summary": {
-                "topics_improved": len(improvements),
-                "topics_declined": len(declines),
-                "topics_stable": len(stable),
-                "new_topics_count": len(new_topics)
-            }
-        }
-
-    def generate_report_data(
-        self,
-        student_id: str,
-        student_name: str,
-        recommendations: Dict[str, any],
-        improvement_tracking: Optional[Dict[str, any]] = None
-    ) -> Dict[str, any]:
-        """
-        Generate structured report data for export.
-        """
-        report = {
-            "report_metadata": {
-                "student_id": student_id,
-                "student_name": student_name,
-                "generated_at": datetime.now().isoformat(),
-                "report_type": "Performance Analysis & Recommendations"
-            },
-            "performance_summary": {
-                "strengths": recommendations.get("strengths", []),
-                "areas_for_improvement": recommendations["study_plan"]["skill_building"]["topics"],
-                "urgent_attention_needed": recommendations["study_plan"]["urgent_review"]["topics"],
-                "ready_for_advancement": recommendations["study_plan"]["advancement"]["topics"]
-            },
-            "detailed_analysis": {
-                "topic_trends": recommendations.get("trends", {}),
-                "llm_insights": {
-                    "explanation": recommendations.get("llm_explanation", ""),
-                    "motivation": recommendations.get("motivational_message", "")
-                }
-            },
-            "study_plan": recommendations.get("study_plan", {}),
-            "recommended_actions": recommendations.get("topic_recommendations", [])
-        }
-        
-        # Add improvement tracking if available
-        if improvement_tracking:
-            report["progress_tracking"] = improvement_tracking
-        
-        return report
-
-    async def generate_recommendations_with_documents(
-        self,
-        student_id: str,
-        performance_history: List[Dict],
-        topic_scores: Dict[str, float],
-        course: str
+        topic_scores: Optional[Dict[str, float]] = None,
+        question_results: Optional[List[Dict]] = None
     ) -> Dict:
         """
-        Generate recommendations with document-specific study suggestions.
+        Generate comprehensive recommendations with question-level analysis.
+        
+        Args:
+            performance_history: Historical performance records
+            topic_scores: Optional topic scores
+            question_results: NEW - Actual question results from latest quiz
+            
+        Returns:
+            Complete recommendation with specific, actionable feedback
         """
-        
-        # Generate base recommendations (existing logic)
-        base_recommendations = await self.generate_recommendations(performance_history, topic_scores)
-        
-        # Check if document service is available
-        if not self.doc_service:
-            logger.warning("Document service not available, skipping document references")
-            base_recommendations["study_materials"] = []
-            base_recommendations["document_references"] = 0
-            return base_recommendations
-        
-        # Identify weak topics
-        topic_averages = self.calculate_performance_metrics(performance_history)
-        weaknesses = [
-            topic for topic, score in topic_averages.items()
-            if score < self.weak_threshold
-        ]
-        
-        # Get document references for weak topics
-        study_materials = []
-        for weak_topic in weaknesses[:3]:  # Top 3 weak areas
-            try:
-                relevant_docs = self.doc_service.retrieve_relevant_content(
-                    query=weak_topic,
-                    filters={"course": course},
-                    top_k=2
+        try:
+            logger.info(f"Generating enhanced recommendations")
+            
+            # STEP 1: Analyze specific question failures (NEW!)
+            failure_analysis = None
+            if question_results:
+                failure_analysis = self.analyze_question_failures(question_results)
+                logger.info(
+                    f"Analyzed {len(question_results)} questions, "
+                    f"found {len(failure_analysis['failed_questions'])} failures"
                 )
-                
-                for doc in relevant_docs:
-                    study_materials.append({
-                        "topic": weak_topic,
-                        "document_id": doc["metadata"]["document_id"],
-                        "week": doc["metadata"].get("week"),
-                        "section": doc["content"][:200] + "...",
-                        "relevance": f"Review this for {weak_topic}"
-                    })
-            except Exception as e:
-                logger.error(f"Failed to retrieve documents for {weak_topic}: {e}")
-                continue
-        
-        # Enhance recommendations
-        base_recommendations["study_materials"] = study_materials
-        base_recommendations["document_references"] = len(study_materials)
-        
-        return base_recommendations
-    
+            
+            # STEP 2: Calculate overall performance metrics
+            topic_averages = self.calculate_performance_metrics(performance_history)
+            
+            if topic_scores:
+                normalized_scores = {
+                    k: min(max(v, 0.0), 1.0)
+                    for k, v in topic_scores.items()
+                }
+                topic_averages.update(normalized_scores)
+            
+            # STEP 3: Identify strengths and weaknesses
+            strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+            
+            # STEP 4: Detect trends
+            trends = self.detect_trends(performance_history)
+            
+            # STEP 5: Generate study plan with specific actions
+            study_plan = self.generate_study_plan(
+                weaknesses, strengths, trends, topic_averages, failure_analysis
+            )
+            
+            # STEP 6: Generate AI insights
+            explanation, motivation = await self.generate_llm_insights(
+                strengths, weaknesses, trends, topic_averages, study_plan, failure_analysis
+            )
+            
+            # STEP 7: Compile recommendations
+            topic_recommendations = (
+                study_plan["urgent_review"]["topics"] +
+                study_plan["skill_building"]["topics"] +
+                study_plan["advancement"]["topics"]
+            )
+            
+            result = {
+                "topic_recommendations": topic_recommendations,
+                "study_plan": study_plan,
+                "strengths": strengths,
+                "weaknesses": weaknesses,
+                "trends": trends,
+                "motivational_message": motivation,
+                "llm_explanation": explanation,
+                # NEW: Include failure analysis
+                "failure_analysis": failure_analysis
+            }
+            
+            logger.info(
+                f"Enhanced recommendations: {len(topic_recommendations)} topics, "
+                f"{len(failure_analysis.get('specific_improvements', []) if failure_analysis else [])} specific improvements"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+            raise
