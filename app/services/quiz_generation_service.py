@@ -1395,6 +1395,390 @@ Quiz Generation Service - FIXED VERSION
 Generates quizzes from content using Groq LLM
 """
 
+# import os
+# import json
+# import re
+# from typing import List, Dict, Optional
+# from datetime import datetime
+# from groq import Groq
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from app.models.quiz_models import (
+#     WeeklyQuizGenerationRequest,
+#     QuizGenerationResult,
+#     GeneratedMCQ,
+#     GeneratedTrueFalse,
+#     GeneratedOpenEnded,
+#     MCQOption,
+#     DifficultyLevel
+# )
+
+# load_dotenv()
+
+
+# class QuizGenerationService:
+#     """Production-ready quiz generation service."""
+    
+#     def __init__(self, groq_api_key: Optional[str] = None):
+#         api_key = groq_api_key or os.getenv("GROQAPI_KEY")
+#         if not api_key:
+#             raise ValueError("GROQAPI_KEY must be provided")
+        
+#         self.client = Groq(api_key=api_key)
+#         self.model = "llama-3.3-70b-versatile"
+#         self.temperature = 0.3
+        
+#         logger.info("QuizGenerationService initialized")
+    
+#     async def generate_weekly_quiz(self, request: WeeklyQuizGenerationRequest) -> QuizGenerationResult:
+#         """
+#         Generate exactly one Canvas-style quiz for a given week.
+        
+#         Args:
+#             request: WeeklyQuizGenerationRequest with combined_content
+            
+#         Returns:
+#             QuizGenerationResult with all questions
+#         """
+#         try:
+#             if len(request.combined_content.strip()) < 100:
+#                 raise ValueError("Weekly content is insufficient for quiz generation")
+
+#             logger.info(
+#                 f"Generating weekly quiz | Course={request.course_id}, "
+#                 f"Week={request.week_number}, MCQ={request.num_mcq}, "
+#                 f"T/F={request.num_true_false}, SA={request.num_short_answer}"
+#             )
+            
+#             # Generate quiz ID
+#             quiz_id = self._generate_quiz_id()
+            
+#             # Initialize result lists
+#             mcq_questions = []
+#             tf_questions = []
+#             sa_questions = []
+            
+#             # Generate MCQs
+#             if request.num_mcq > 0:
+#                 mcq_questions = await self._generate_mcq(
+#                     content=request.combined_content,
+#                     num_questions=request.num_mcq,
+#                     difficulty=request.difficulty_level,
+#                     topic=f"Week {request.week_number}"
+#                 )
+            
+#             # Generate True/False
+#             if request.num_true_false > 0:
+#                 tf_questions = await self._generate_true_false(
+#                     content=request.combined_content,
+#                     num_questions=request.num_true_false,
+#                     difficulty=request.difficulty_level,
+#                     topic=f"Week {request.week_number}"
+#                 )
+            
+#             # Generate Short Answer
+#             if request.num_short_answer > 0:
+#                 sa_questions = await self._generate_short_answer(
+#                     content=request.combined_content,
+#                     num_questions=request.num_short_answer,
+#                     difficulty=request.difficulty_level,
+#                     topic=f"Week {request.week_number}"
+#                 )
+            
+#             # Calculate totals
+#             total_questions = len(mcq_questions) + len(tf_questions) + len(sa_questions)
+#             total_points = (
+#                 sum(q.points for q in mcq_questions) +
+#                 sum(q.points for q in tf_questions) +
+#                 sum(q.points for q in sa_questions)
+#             )
+            
+#             # Estimate duration (2 min per MCQ/TF, 5 min per SA)
+#             estimated_duration = (
+#                 (len(mcq_questions) + len(tf_questions)) * 2 +
+#                 len(sa_questions) * 5
+#             )
+            
+#             # Build result
+#             result = QuizGenerationResult(
+#                 # quiz_id=quiz_id,
+#                 # topic=f"Week {request.week_number} - {', '.join(request.modules[:2])}",
+#                 difficulty_level=request.difficulty_level,
+#                 mcq_questions=mcq_questions,
+#                 true_false_questions=tf_questions,
+#                 open_ended_questions=sa_questions,
+#                 total_questions=total_questions,
+#                 total_points=total_points,
+#                 estimated_duration_minutes=estimated_duration,
+#                 generated_at=datetime.now().isoformat(),
+#                 generation_metadata={
+#                     "course_id": request.course_id,
+#                     # "week_number": request.week_number,
+#                     # "modules": request.modules,
+#                     "quiz_type": "weekly",
+#                     "student_id": request.student_id
+#                 }
+#             )
+            
+#             logger.info(
+#                 f" Weekly quiz generated: {quiz_id} | "
+#                 f"{total_questions} questions, {total_points} points"
+#             )
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f" Weekly quiz generation failed: {e}", exc_info=True)
+#             raise
+    
+#     async def _generate_mcq(self,content: str,num_questions: int,difficulty: DifficultyLevel,topic: str) -> List[GeneratedMCQ]:
+#         """Generate multiple choice questions."""
+        
+#         prompt = f"""You are a TVET educator. Generate EXACTLY {num_questions} multiple-choice questions based ONLY on this content.
+
+# CONTENT:
+# {content}
+
+# DIFFICULTY: {difficulty.value}
+
+# RULES:
+# 1. Questions MUST come from the content
+# 2. Create 4 options (A, B, C, D) per question
+# 3. Make distractors plausible but incorrect
+# 4. Provide clear explanations
+
+# Return ONLY a JSON array:
+# [
+#   {{
+#     "question": "Question text?",
+#     "options": [
+#       {{"id": "A", "text": "Option A"}},
+#       {{"id": "B", "text": "Option B"}},
+#       {{"id": "C", "text": "Option C"}},
+#       {{"id": "D", "text": "Option D"}}
+#     ],
+#     "correct_answer": "B",
+#     "explanation": "Why B is correct"
+#   }}
+# ]
+
+# Generate EXACTLY {num_questions} questions."""
+
+#         try:
+#             response = self.client.chat.completions.create(
+#                 model=self.model,
+#                 messages=[
+#                     {
+#                         "role": "system",
+#                         "content": "You are a TVET quiz creator. Return ONLY valid JSON."
+#                     },
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 temperature=self.temperature,
+#                 max_tokens=3000
+#             )
+            
+#             response_text = response.choices[0].message.content.strip()
+#             response_text = self._extract_json(response_text)
+#             questions_data = json.loads(response_text)
+            
+#             # Convert to Pydantic models
+#             questions = []
+#             for q_data in questions_data[:num_questions]:
+#                 # Convert options to MCQOption objects
+#                 options = [
+#                     MCQOption(option_id=opt["id"], text=opt["text"])
+#                     for opt in q_data["options"]
+#                 ]
+                
+#                 questions.append(GeneratedMCQ(
+#                     question_text=q_data["question"],
+#                     options=options,
+#                     correct_answer=q_data["correct_answer"],
+#                     explanation=q_data["explanation"],
+#                     difficulty=difficulty,
+#                     topic=topic,
+#                     points=5.0
+#                 ))
+            
+#             logger.info(f"Generated {len(questions)} MCQ questions")
+#             return questions
+            
+#         except Exception as e:
+#             logger.error(f" MCQ generation failed: {e}")
+#             raise
+    
+#     async def _generate_true_false(
+#         self,
+#         content: str,
+#         num_questions: int,
+#         difficulty: DifficultyLevel,
+#         topic: str
+#     ) -> List[GeneratedTrueFalse]:
+#         """Generate true/false questions."""
+        
+#         prompt = f"""Generate EXACTLY {num_questions} True/False questions based ONLY on this content.
+
+# CONTENT:
+# {content}
+
+# DIFFICULTY: {difficulty.value}
+
+# Return ONLY a JSON array:
+# [
+#   {{
+#     "question": "Statement here.",
+#     "correct_answer": true,
+#     "explanation": "Why this is true/false"
+#   }}
+# ]
+
+# Generate EXACTLY {num_questions} questions."""
+
+#         try:
+#             response = self.client.chat.completions.create(
+#                 model=self.model,
+#                 messages=[
+#                     {
+#                         "role": "system",
+#                         "content": "You are a TVET quiz creator. Return ONLY valid JSON."
+#                     },
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 temperature=self.temperature,
+#                 max_tokens=2000
+#             )
+            
+#             response_text = response.choices[0].message.content.strip()
+#             response_text = self._extract_json(response_text)
+#             questions_data = json.loads(response_text)
+            
+#             questions = []
+#             for q_data in questions_data[:num_questions]:
+#                 questions.append(GeneratedTrueFalse(
+#                     question_text=q_data["question"],
+#                     correct_answer=q_data["correct_answer"],
+#                     explanation=q_data["explanation"],
+#                     difficulty=difficulty,
+#                     topic=topic,
+#                     points=3.0
+#                 ))
+            
+#             logger.info(f" Generated {len(questions)} T/F questions")
+#             return questions
+            
+#         except Exception as e:
+#             logger.error(f" T/F generation failed: {e}")
+#             raise
+    
+#     async def _generate_short_answer(self,content: str,num_questions: int,difficulty: DifficultyLevel,topic: str) -> List[GeneratedOpenEnded]:
+#         """Generate short answer questions."""
+        
+#         prompt = f"""Generate EXACTLY {num_questions} short answer questions based ONLY on this content.
+
+# CONTENT:
+# {content}
+
+# DIFFICULTY: {difficulty.value}
+
+# Return ONLY a JSON array:
+# [
+#   {{
+#     "question": "Question here?",
+#     "rubric": "Grading criteria",
+#     "sample_answer": "Complete answer",
+#     "keywords": ["key1", "key2", "key3"]
+#   }}
+# ]
+
+# Generate EXACTLY {num_questions} questions."""
+
+#         try:
+#             response = self.client.chat.completions.create(
+#                 model=self.model,
+#                 messages=[
+#                     {
+#                         "role": "system",
+#                         "content": "You are a TVET quiz creator. Return ONLY valid JSON."
+#                     },
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 temperature=self.temperature,
+#                 max_tokens=2500
+#             )
+            
+#             response_text = response.choices[0].message.content.strip()
+#             response_text = self._extract_json(response_text)
+#             questions_data = json.loads(response_text)
+            
+#             questions = []
+#             for q_data in questions_data[:num_questions]:
+#                 questions.append(GeneratedOpenEnded(
+#                     question_text=q_data["question"],
+#                     rubric=q_data["rubric"],
+#                     sample_answer=q_data["sample_answer"],
+#                     keywords=q_data.get("keywords", []),
+#                     difficulty=difficulty,
+#                     topic=topic,
+#                     points=10.0
+#                 ))
+            
+#             logger.info(f"Generated {len(questions)} short answer questions")
+#             return questions
+            
+#         except Exception as e:
+#             logger.error(f" Short answer generation failed: {e}")
+#             raise
+    
+#     def _extract_json(self, text: str) -> str:
+#         """Extract JSON from LLM response."""
+#         text = text.strip()
+        
+#         # Remove markdown
+#         if text.startswith("```json"):
+#             text = text[7:]
+#         elif text.startswith("```"):
+#             text = text[3:]
+        
+#         if text.endswith("```"):
+#             text = text[:-3]
+        
+#         # Find JSON array
+#         start = text.find('[')
+#         end = text.rfind(']')
+        
+#         if start != -1 and end != -1:
+#             return text[start:end+1]
+        
+#         return text.strip()
+    
+#     def _generate_quiz_id(self) -> str:
+#         """Generate unique quiz ID."""
+#         from uuid import uuid4
+#         return f"quiz_{uuid4().hex[:12]}"
+
+
+
+
+
+
+# Legacy version
+
+
+
+
+
+
+
+
+
+
+"""
+Quiz Generation Service - Legacy Format
+Outputs in your original format with simple dictionaries
+Location: app/services/quiz_generation_service.py
+"""
+
 import os
 import json
 import re
@@ -1403,21 +1787,12 @@ from datetime import datetime
 from groq import Groq
 from dotenv import load_dotenv
 from app.core.logging_config import logger
-from app.models.quiz_models import (
-    WeeklyQuizGenerationRequest,
-    QuizGenerationResult,
-    GeneratedMCQ,
-    GeneratedTrueFalse,
-    GeneratedOpenEnded,
-    MCQOption,
-    DifficultyLevel
-)
 
 load_dotenv()
 
 
 class QuizGenerationService:
-    """Production-ready quiz generation service."""
+    """Quiz generation service outputting legacy format."""
     
     def __init__(self, groq_api_key: Optional[str] = None):
         api_key = groq_api_key or os.getenv("GROQAPI_KEY")
@@ -1428,147 +1803,111 @@ class QuizGenerationService:
         self.model = "llama-3.3-70b-versatile"
         self.temperature = 0.3
         
-        logger.info("QuizGenerationService initialized")
+        logger.info(" QuizGenerationService initialized (Legacy Format)")
     
-    async def generate_weekly_quiz(self, request: WeeklyQuizGenerationRequest) -> QuizGenerationResult:
+    async def generate_weekly_quiz(self, request) -> Dict:
         """
-        Generate exactly one Canvas-style quiz for a given week.
+        Generate weekly quiz in LEGACY format.
         
-        Args:
-            request: WeeklyQuizGenerationRequest with combined_content
-            
-        Returns:
-            QuizGenerationResult with all questions
+        Returns simple dict structure (not Pydantic models)
         """
         try:
-            if len(request.combined_content.strip()) < 100:
-                raise ValueError("Weekly content is insufficient for quiz generation")
-
             logger.info(
-                f"Generating weekly quiz | Course={request.course_id}, "
-                f"Week={request.week_number}, MCQ={request.num_mcq}, "
-                f"T/F={request.num_true_false}, SA={request.num_short_answer}"
+                f" Generating quiz (Legacy Format) | "
+                f"MCQ={request.num_mcq}, T/F={request.num_true_false}, SA={request.num_short_answer}"
             )
             
-            # Generate quiz ID
-            quiz_id = self._generate_quiz_id()
-            
-            # Initialize result lists
-            mcq_questions = []
-            tf_questions = []
-            sa_questions = []
+            # Generate quiz data
+            quiz_data = {
+                "quiz_id": self._generate_quiz_id(),
+                "generated_at": datetime.now().isoformat(),
+                "difficulty_level": request.difficulty_level.value if hasattr(request.difficulty_level, 'value') else request.difficulty_level,
+                "multiple_choice": [],
+                "true_false": [],
+                "short_answer": []
+            }
             
             # Generate MCQs
             if request.num_mcq > 0:
-                mcq_questions = await self._generate_mcq(
-                    content=request.combined_content,
-                    num_questions=request.num_mcq,
-                    difficulty=request.difficulty_level,
-                    topic=f"Week {request.week_number}"
+                mcq = await self._generate_mcq(
+                    request.combined_content,
+                    request.num_mcq,
+                    4,  # Always 4 options
+                    quiz_data["difficulty_level"]
                 )
+                quiz_data["multiple_choice"] = mcq
             
             # Generate True/False
             if request.num_true_false > 0:
-                tf_questions = await self._generate_true_false(
-                    content=request.combined_content,
-                    num_questions=request.num_true_false,
-                    difficulty=request.difficulty_level,
-                    topic=f"Week {request.week_number}"
+                tf = await self._generate_true_false(
+                    request.combined_content,
+                    request.num_true_false,
+                    quiz_data["difficulty_level"]
                 )
+                quiz_data["true_false"] = tf
             
             # Generate Short Answer
             if request.num_short_answer > 0:
-                sa_questions = await self._generate_short_answer(
-                    content=request.combined_content,
-                    num_questions=request.num_short_answer,
-                    difficulty=request.difficulty_level,
-                    topic=f"Week {request.week_number}"
+                sa = await self._generate_short_answer(
+                    request.combined_content,
+                    request.num_short_answer,
+                    quiz_data["difficulty_level"]
                 )
+                quiz_data["short_answer"] = sa
             
-            # Calculate totals
-            total_questions = len(mcq_questions) + len(tf_questions) + len(sa_questions)
-            total_points = (
-                sum(q.points for q in mcq_questions) +
-                sum(q.points for q in tf_questions) +
-                sum(q.points for q in sa_questions)
+            # Calculate total
+            quiz_data["total_questions"] = (
+                len(quiz_data["multiple_choice"]) +
+                len(quiz_data["true_false"]) +
+                len(quiz_data["short_answer"])
             )
             
-            # Estimate duration (2 min per MCQ/TF, 5 min per SA)
-            estimated_duration = (
-                (len(mcq_questions) + len(tf_questions)) * 2 +
-                len(sa_questions) * 5
-            )
+            logger.info(f"Quiz generated: {quiz_data['quiz_id']} ({quiz_data['total_questions']} questions)")
             
-            # Build result
-            result = QuizGenerationResult(
-                quiz_id=quiz_id,
-                topic=f"Week {request.week_number} - {', '.join(request.modules[:2])}",
-                difficulty_level=request.difficulty_level,
-                mcq_questions=mcq_questions,
-                true_false_questions=tf_questions,
-                open_ended_questions=sa_questions,
-                total_questions=total_questions,
-                total_points=total_points,
-                estimated_duration_minutes=estimated_duration,
-                generated_at=datetime.now().isoformat(),
-                generation_metadata={
-                    "course_id": request.course_id,
-                    "week_number": request.week_number,
-                    "modules": request.modules,
-                    "quiz_type": "weekly",
-                    "student_id": request.student_id
-                }
-            )
-            
-            logger.info(
-                f"✅ Weekly quiz generated: {quiz_id} | "
-                f"{total_questions} questions, {total_points} points"
-            )
-            
-            return result
+            return quiz_data
             
         except Exception as e:
-            logger.error(f"❌ Weekly quiz generation failed: {e}", exc_info=True)
+            logger.error(f" Quiz generation failed: {e}", exc_info=True)
             raise
     
     async def _generate_mcq(
         self,
         content: str,
         num_questions: int,
-        difficulty: DifficultyLevel,
-        topic: str
-    ) -> List[GeneratedMCQ]:
-        """Generate multiple choice questions."""
+        num_options: int,
+        difficulty: str
+    ) -> List[Dict]:
+        """Generate MCQ in legacy format."""
         
-        prompt = f"""You are a TVET educator. Generate EXACTLY {num_questions} multiple-choice questions based ONLY on this content.
+        prompt = f"""You are an expert TVET educator. Generate EXACTLY {num_questions} multiple-choice questions based ONLY on the content below.
 
 CONTENT:
 {content}
 
-DIFFICULTY: {difficulty.value}
+DIFFICULTY: {difficulty}
 
-RULES:
-1. Questions MUST come from the content
-2. Create 4 options (A, B, C, D) per question
-3. Make distractors plausible but incorrect
+CRITICAL RULES:
+1. ALL questions MUST come from the provided content
+2. Create realistic distractors (plausible wrong answers)
+3. Each question has EXACTLY 4 options (A, B, C, D)
 4. Provide clear explanations
 
-Return ONLY a JSON array:
+Return ONLY a JSON array with this EXACT structure:
 [
   {{
-    "question": "Question text?",
-    "options": [
-      {{"id": "A", "text": "Option A"}},
-      {{"id": "B", "text": "Option B"}},
-      {{"id": "C", "text": "Option C"}},
-      {{"id": "D", "text": "Option D"}}
-    ],
+    "question": "Question text here?",
+    "options": {{
+      "A": "First option text",
+      "B": "Second option text",
+      "C": "Third option text",
+      "D": "Fourth option text"
+    }},
     "correct_answer": "B",
-    "explanation": "Why B is correct"
+    "explanation": "Why this answer is correct based on the content"
   }}
 ]
 
-Generate EXACTLY {num_questions} questions."""
+Generate EXACTLY {num_questions} questions. Return ONLY the JSON array, no other text."""
 
         try:
             response = self.client.chat.completions.create(
@@ -1576,7 +1915,7 @@ Generate EXACTLY {num_questions} questions."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a TVET quiz creator. Return ONLY valid JSON."
+                        "content": "You are a TVET quiz creator. Generate questions ONLY from provided content. Return ONLY valid JSON."
                     },
                     {"role": "user", "content": prompt}
                 ],
@@ -1586,60 +1925,48 @@ Generate EXACTLY {num_questions} questions."""
             
             response_text = response.choices[0].message.content.strip()
             response_text = self._extract_json(response_text)
-            questions_data = json.loads(response_text)
+            questions = json.loads(response_text)
             
-            # Convert to Pydantic models
-            questions = []
-            for q_data in questions_data[:num_questions]:
-                # Convert options to MCQOption objects
-                options = [
-                    MCQOption(option_id=opt["id"], text=opt["text"])
-                    for opt in q_data["options"]
-                ]
-                
-                questions.append(GeneratedMCQ(
-                    question_text=q_data["question"],
-                    options=options,
-                    correct_answer=q_data["correct_answer"],
-                    explanation=q_data["explanation"],
-                    difficulty=difficulty,
-                    topic=topic,
-                    points=5.0
-                ))
-            
-            logger.info(f"✅ Generated {len(questions)} MCQ questions")
-            return questions
+            logger.info(f" Generated {len(questions)} MCQ questions")
+            return questions[:num_questions]
             
         except Exception as e:
-            logger.error(f"❌ MCQ generation failed: {e}")
+            logger.error(f" MCQ generation failed: {e}")
             raise
     
     async def _generate_true_false(
         self,
         content: str,
         num_questions: int,
-        difficulty: DifficultyLevel,
-        topic: str
-    ) -> List[GeneratedTrueFalse]:
-        """Generate true/false questions."""
+        difficulty: str
+    ) -> List[Dict]:
+        """Generate True/False in legacy format."""
         
-        prompt = f"""Generate EXACTLY {num_questions} True/False questions based ONLY on this content.
+        prompt = f"""You are an expert TVET educator. Generate EXACTLY {num_questions} True/False questions based ONLY on the content below.
 
 CONTENT:
 {content}
 
-DIFFICULTY: {difficulty.value}
+DIFFICULTY: {difficulty}
 
-Return ONLY a JSON array:
+CRITICAL RULES:
+1. ALL statements MUST come from the provided content
+2. Create statements that are clearly true or clearly false
+3. Provide explanations citing the content
+
+Return ONLY a JSON array with this EXACT structure:
 [
   {{
-    "question": "Statement here.",
+    "question": "Statement about the content.",
     "correct_answer": true,
-    "explanation": "Why this is true/false"
+    "explanation": "Why this is true/false based on the content"
   }}
 ]
 
-Generate EXACTLY {num_questions} questions."""
+IMPORTANT:
+- Use boolean values: true or false (lowercase, no quotes)
+- Generate EXACTLY {num_questions} questions
+- Return ONLY the JSON array, no other text"""
 
         try:
             response = self.client.chat.completions.create(
@@ -1657,53 +1984,49 @@ Generate EXACTLY {num_questions} questions."""
             
             response_text = response.choices[0].message.content.strip()
             response_text = self._extract_json(response_text)
-            questions_data = json.loads(response_text)
+            questions = json.loads(response_text)
             
-            questions = []
-            for q_data in questions_data[:num_questions]:
-                questions.append(GeneratedTrueFalse(
-                    question_text=q_data["question"],
-                    correct_answer=q_data["correct_answer"],
-                    explanation=q_data["explanation"],
-                    difficulty=difficulty,
-                    topic=topic,
-                    points=3.0
-                ))
-            
-            logger.info(f"✅ Generated {len(questions)} T/F questions")
-            return questions
+            logger.info(f" Generated {len(questions)} T/F questions")
+            return questions[:num_questions]
             
         except Exception as e:
-            logger.error(f"❌ T/F generation failed: {e}")
+            logger.error(f" T/F generation failed: {e}")
             raise
     
     async def _generate_short_answer(
         self,
         content: str,
         num_questions: int,
-        difficulty: DifficultyLevel,
-        topic: str
-    ) -> List[GeneratedOpenEnded]:
-        """Generate short answer questions."""
+        difficulty: str
+    ) -> List[Dict]:
+        """Generate Short Answer in legacy format."""
         
-        prompt = f"""Generate EXACTLY {num_questions} short answer questions based ONLY on this content.
+        prompt = f"""You are an expert TVET educator. Generate EXACTLY {num_questions} open-ended short answer questions based ONLY on the content below.
 
 CONTENT:
 {content}
 
-DIFFICULTY: {difficulty.value}
+DIFFICULTY: {difficulty}
 
-Return ONLY a JSON array:
+CRITICAL RULES:
+1. ALL questions must be answerable using ONLY the provided content
+2. Questions should require 2-4 sentence responses
+3. Provide key points and sample answer
+
+Return ONLY a JSON array with this EXACT structure:
 [
   {{
-    "question": "Question here?",
-    "rubric": "Grading criteria",
-    "sample_answer": "Complete answer",
-    "keywords": ["key1", "key2", "key3"]
+    "question": "Open-ended question here?",
+    "key_points": [
+      "First key point",
+      "Second key point",
+      "Third key point"
+    ],
+    "sample_answer": "A complete sample answer that addresses all key points based on the content"
   }}
 ]
 
-Generate EXACTLY {num_questions} questions."""
+Generate EXACTLY {num_questions} questions. Return ONLY the JSON array, no other text."""
 
         try:
             response = self.client.chat.completions.create(
@@ -1721,32 +2044,20 @@ Generate EXACTLY {num_questions} questions."""
             
             response_text = response.choices[0].message.content.strip()
             response_text = self._extract_json(response_text)
-            questions_data = json.loads(response_text)
+            questions = json.loads(response_text)
             
-            questions = []
-            for q_data in questions_data[:num_questions]:
-                questions.append(GeneratedOpenEnded(
-                    question_text=q_data["question"],
-                    rubric=q_data["rubric"],
-                    sample_answer=q_data["sample_answer"],
-                    keywords=q_data.get("keywords", []),
-                    difficulty=difficulty,
-                    topic=topic,
-                    points=10.0
-                ))
-            
-            logger.info(f"✅ Generated {len(questions)} short answer questions")
-            return questions
+            logger.info(f"Generated {len(questions)} short answer questions")
+            return questions[:num_questions]
             
         except Exception as e:
-            logger.error(f"❌ Short answer generation failed: {e}")
+            logger.error(f"Short answer generation failed: {e}")
             raise
     
     def _extract_json(self, text: str) -> str:
         """Extract JSON from LLM response."""
         text = text.strip()
         
-        # Remove markdown
+        # Remove markdown code blocks
         if text.startswith("```json"):
             text = text[7:]
         elif text.startswith("```"):
