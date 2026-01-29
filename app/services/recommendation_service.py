@@ -3217,26 +3217,2485 @@ Analyzes actual student mistakes and provides specific, actionable recommendatio
 Location: app/services/recommendation_service.py
 """
 
-import numpy as np
-from typing import List, Dict, Tuple, Optional
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+# from collections import Counter
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     Advanced recommendation system that analyzes:
+#     1. Overall performance trends
+#     2. Specific question failures
+#     3. Concept-level weaknesses
+#     4. Learning patterns
+#     """
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         # Performance thresholds
+#         self.weak_threshold = 0.60
+#         self.strong_threshold = 0.80
+        
+#         logger.info("Enhanced RecommendationService initialized")
+    
+#     def analyze_question_failures(
+#         self,
+#         question_results: List[Dict]
+#     ) -> Dict:
+#         """
+#         Analyze specific questions that were answered incorrectly.
+        
+#         Args:
+#             question_results: List of graded question results
+            
+#         Returns:
+#             Detailed failure analysis with specific recommendations
+#         """
+#         failures = {
+#             "failed_questions": [],
+#             "weak_question_types": [],
+#             "concepts_to_review": [],
+#             "specific_improvements": []
+#         }
+        
+#         # Track performance by question type
+#         type_performance = {}
+        
+#         for result in question_results:
+#             q_type = result["question_type"]
+#             is_correct = result.get("is_correct")
+#             awarded = result["awarded_points"]
+#             max_points = result["max_points"]
+            
+#             # Track by type
+#             if q_type not in type_performance:
+#                 type_performance[q_type] = {"correct": 0, "total": 0, "points": 0, "max": 0}
+            
+#             type_performance[q_type]["total"] += 1
+#             type_performance[q_type]["points"] += awarded
+#             type_performance[q_type]["max"] += max_points
+            
+#             # Identify failures
+#             if is_correct is False or (is_correct is None and awarded < max_points * 0.7):
+#                 failures["failed_questions"].append({
+#                     "question_id": result["question_id"],
+#                     "type": q_type,
+#                     "points_lost": max_points - awarded,
+#                     "feedback": result.get("feedback", ""),
+#                     "improvements": result.get("improvements", [])
+#                 })
+                
+#                 # Extract specific concepts from improvements
+#                 if result.get("improvements"):
+#                     failures["concepts_to_review"].extend(result["improvements"])
+        
+#         # Identify weak question types
+#         for q_type, stats in type_performance.items():
+#             percentage = (stats["points"] / stats["max"] * 100) if stats["max"] > 0 else 0
+#             if percentage < 70:
+#                 failures["weak_question_types"].append({
+#                     "type": q_type,
+#                     "percentage": round(percentage, 1),
+#                     "questions_attempted": stats["total"]
+#                 })
+        
+#         # Generate specific improvements
+#         failures["specific_improvements"] = self._generate_specific_improvements(
+#             failures["failed_questions"],
+#             failures["weak_question_types"]
+#         )
+        
+#         # Deduplicate concepts
+#         failures["concepts_to_review"] = list(set(failures["concepts_to_review"]))
+        
+#         return failures
+    
+#     def _generate_specific_improvements(
+#         self,
+#         failed_questions: List[Dict],
+#         weak_types: List[Dict]
+#     ) -> List[str]:
+#         """Generate actionable improvement recommendations."""
+#         improvements = []
+        
+#         # Recommendations based on failed questions
+#         if failed_questions:
+#             improvements.append(
+#                 f"Review the {len(failed_questions)} questions you missed - "
+#                 "understanding your mistakes is key to improvement"
+#             )
+            
+#             # Group by type
+#             type_counts = Counter(q["type"] for q in failed_questions)
+#             for q_type, count in type_counts.most_common(2):
+#                 type_name = self._humanize_question_type(q_type)
+#                 improvements.append(
+#                     f"Practice more {type_name} questions - "
+#                     f"you missed {count} in this area"
+#                 )
+        
+#         # Recommendations based on weak types
+#         for weak in weak_types:
+#             type_name = self._humanize_question_type(weak["type"])
+#             improvements.append(
+#                 f"Strengthen your {type_name} skills - "
+#                 f"currently at {weak['percentage']:.0f}%"
+#             )
+        
+#         return improvements
+    
+#     def _humanize_question_type(self, q_type: str) -> str:
+#         """Convert question type codes to readable names."""
+#         type_map = {
+#             "mcq": "multiple choice",
+#             "multiple_choice": "multiple choice",
+#             "true_false": "true/false",
+#             "short_answer": "short answer",
+#             "essay": "essay",
+#             "practical": "practical"
+#         }
+#         return type_map.get(q_type.lower(), q_type)
+    
+#     def calculate_performance_metrics(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, float]:
+#         """Calculate normalized performance scores per topic."""
+#         topic_performance = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
+            
+#             if topic not in topic_performance:
+#                 topic_performance[topic] = []
+#             topic_performance[topic].append(normalized_score)
+        
+#         topic_averages = {
+#             topic: np.mean(scores)
+#             for topic, scores in topic_performance.items()
+#         }
+        
+#         return topic_averages
+    
+#     def identify_strengths_weaknesses(
+#         self,
+#         topic_averages: Dict[str, float]
+#     ) -> Tuple[List[str], List[str]]:
+#         """Classify topics into strengths and weaknesses."""
+#         strengths = [
+#             topic for topic, score in topic_averages.items()
+#             if score >= self.strong_threshold
+#         ]
+        
+#         weaknesses = [
+#             topic for topic, score in topic_averages.items()
+#             if score < self.weak_threshold
+#         ]
+        
+#         return strengths, weaknesses
+    
+#     def detect_trends(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, str]:
+#         """Detect performance trends: improving, declining, or stable."""
+#         topic_trends = {}
+#         topic_scores_timeline = {}
+        
+#         for record in performance_history:
+#             topic = record["topic"]
+#             normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
+            
+#             if topic not in topic_scores_timeline:
+#                 topic_scores_timeline[topic] = []
+#             topic_scores_timeline[topic].append(normalized_score)
+        
+#         for topic, scores in topic_scores_timeline.items():
+#             if len(scores) < 2:
+#                 topic_trends[topic] = "insufficient_data"
+#                 continue
+            
+#             recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
+#             early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
+            
+#             if recent_avg > early_avg + 0.1:
+#                 topic_trends[topic] = "improving"
+#             elif recent_avg < early_avg - 0.1:
+#                 topic_trends[topic] = "declining"
+#             else:
+#                 topic_trends[topic] = "stable"
+        
+#         return topic_trends
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[str],
+#         strengths: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Dict:
+#         """
+#         Create a prioritized study plan based on:
+#         1. Performance trends
+#         2. Weak topics
+#         3. Specific question failures
+#         """
+#         # Priority 1: Declining topics + failed concepts
+#         declining_topics = [
+#             topic for topic, trend in trends.items()
+#             if trend == "declining"
+#         ]
+        
+#         # Priority 2: Weak topics
+#         improvement_topics = [
+#             topic for topic in weaknesses
+#             if topic not in declining_topics
+#         ]
+        
+#         # Priority 3: Strong topics showing improvement
+#         advancement_topics = [
+#             topic for topic in strengths
+#             if trends.get(topic) == "improving"
+#         ]
+        
+#         # Build study plan
+#         study_plan = {
+#             "urgent_review": {
+#                 "topics": declining_topics,
+#                 "reason": "Performance is declining - immediate attention needed",
+#                 "suggested_hours": len(declining_topics) * 3,
+#                 "specific_actions": []
+#             },
+#             "skill_building": {
+#                 "topics": improvement_topics,
+#                 "reason": "Below mastery threshold - foundational work needed",
+#                 "suggested_hours": len(improvement_topics) * 2,
+#                 "specific_actions": []
+#             },
+#             "advancement": {
+#                 "topics": advancement_topics,
+#                 "reason": "Strong foundation - ready for advanced concepts",
+#                 "suggested_hours": len(advancement_topics) * 1.5,
+#                 "specific_actions": []
+#             }
+#         }
+        
+#         # Add specific actions from failure analysis
+#         if failure_analysis:
+#             # Add concept reviews to urgent/skill-building
+#             concepts = failure_analysis.get("concepts_to_review", [])
+#             if concepts:
+#                 if declining_topics:
+#                     study_plan["urgent_review"]["specific_actions"].extend([
+#                         f"Review: {concept}" for concept in concepts[:3]
+#                     ])
+#                 else:
+#                     study_plan["skill_building"]["specific_actions"].extend([
+#                         f"Review: {concept}" for concept in concepts[:3]
+#                     ])
+            
+#             # Add question type practice
+#             weak_types = failure_analysis.get("weak_question_types", [])
+#             for weak in weak_types:
+#                 action = f"Practice {self._humanize_question_type(weak['type'])} questions"
+#                 study_plan["skill_building"]["specific_actions"].append(action)
+        
+#         return study_plan
+    
+#     async def generate_llm_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         trends: Dict[str, str],
+#         topic_averages: Dict[str, float],
+#         study_plan: Dict,
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Tuple[str, str]:
+#         """Generate personalized insights based on actual performance."""
+#         if not self.groq_api_key:
+#             return self._fallback_insights(strengths, weaknesses, failure_analysis)
+        
+#         # Build context from failure analysis
+#         failure_context = ""
+#         if failure_analysis:
+#             failed_count = len(failure_analysis.get("failed_questions", []))
+#             concepts = failure_analysis.get("concepts_to_review", [])
+#             weak_types = failure_analysis.get("weak_question_types", [])
+            
+#             if failed_count > 0:
+#                 failure_context = f"""
+# Recent Quiz Performance:
+# - Questions missed: {failed_count}
+# - Concepts needing review: {', '.join(concepts[:5]) if concepts else 'N/A'}
+# - Question types to practice: {', '.join([t['type'] for t in weak_types]) if weak_types else 'N/A'}
+# """
+        
+#         system_prompt = """You are a supportive TVET instructor providing personalized feedback.
+# Be specific about what the student needs to work on based on their actual mistakes.
+# Reference specific concepts they struggled with."""
+        
+#         user_prompt = f"""Student Performance Analysis:
+# - Strong Topics: {', '.join(strengths) if strengths else 'Still building foundation'}
+# - Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'Good progress'}
+# - Trends: {trends}
+# {failure_context}
+
+# Study Plan:
+# - Urgent: {', '.join(study_plan['urgent_review']['topics']) if study_plan['urgent_review']['topics'] else 'None'}
+# - Build Skills: {', '.join(study_plan['skill_building']['topics']) if study_plan['skill_building']['topics'] else 'None'}
+# - Advance: {', '.join(study_plan['advancement']['topics']) if study_plan['advancement']['topics'] else 'None'}
+
+# Generate TWO paragraphs (2-3 sentences each):
+# 1. EXPLANATION: What patterns you see in their learning, specifically addressing their recent mistakes
+# 2. MOTIVATION: Encouraging message that acknowledges their challenges and provides hope
+
+# Be specific - mention actual concepts they struggled with if available."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 350
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"].strip()
+                    
+#                     parts = llm_output.split("\n\n")
+#                     explanation = parts[0].strip() if len(parts) > 0 else llm_output
+#                     motivation = parts[1].strip() if len(parts) > 1 else "Keep working hard!"
+                    
+#                     return explanation, motivation
+#                 else:
+#                     return self._fallback_insights(strengths, weaknesses, failure_analysis)
+            
+#         except Exception as e:
+#             logger.error(f"LLM insights failed: {e}")
+#             return self._fallback_insights(strengths, weaknesses, failure_analysis)
+    
+#     def _fallback_insights(
+#         self,
+#         strengths: List[str],
+#         weaknesses: List[str],
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Tuple[str, str]:
+#         """Enhanced fallback with failure analysis."""
+#         concepts_str = ""
+#         if failure_analysis:
+#             concepts = failure_analysis.get("concepts_to_review", [])
+#             if concepts:
+#                 concepts_str = f" Pay special attention to: {', '.join(concepts[:3])}."
+        
+#         if weaknesses:
+#             explanation = (
+#                 f"Your recent quiz shows you need to strengthen your understanding in "
+#                 f"{len(weaknesses)} areas: {', '.join(weaknesses[:2])}."
+#                 f"{concepts_str} Focused practice on these concepts will help you improve."
+#             )
+#             motivation = (
+#                 "Every expert struggled with difficult concepts at first. "
+#                 "The fact that you're identifying where you need help shows you're on the right path. "
+#                 "Keep practicing these specific areas!"
+#             )
+#         elif strengths:
+#             explanation = (
+#                 f"Excellent work! You're showing strong mastery in {len(strengths)} topics. "
+#                 "Your consistent performance demonstrates solid understanding."
+#             )
+#             motivation = (
+#                 "You're ready to tackle more advanced material. "
+#                 "Keep up this outstanding work!"
+#             )
+#         else:
+#             explanation = "You're building your foundation in these topics."
+#             motivation = "Stay consistent with your practice. Progress takes time!"
+        
+#         return explanation, motivation
+    
+#     async def generate_recommendations(
+#         self,
+#         performance_history: List[Dict],
+#         topic_scores: Optional[Dict[str, float]] = None,
+#         question_results: Optional[List[Dict]] = None
+#     ) -> Dict:
+#         """
+#         Generate comprehensive recommendations with question-level analysis.
+        
+#         Args:
+#             performance_history: Historical performance records
+#             topic_scores: Optional topic scores
+#             question_results: NEW - Actual question results from latest quiz
+            
+#         Returns:
+#             Complete recommendation with specific, actionable feedback
+#         """
+#         try:
+#             logger.info(f"Generating enhanced recommendations")
+            
+#             # STEP 1: Analyze specific question failures (NEW!)
+#             failure_analysis = None
+#             if question_results:
+#                 failure_analysis = self.analyze_question_failures(question_results)
+#                 logger.info(
+#                     f"Analyzed {len(question_results)} questions, "
+#                     f"found {len(failure_analysis['failed_questions'])} failures"
+#                 )
+            
+#             # STEP 2: Calculate overall performance metrics
+#             topic_averages = self.calculate_performance_metrics(performance_history)
+            
+#             if topic_scores:
+#                 normalized_scores = {
+#                     k: min(max(v, 0.0), 1.0)
+#                     for k, v in topic_scores.items()
+#                 }
+#                 topic_averages.update(normalized_scores)
+            
+#             # STEP 3: Identify strengths and weaknesses
+#             strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
+            
+#             # STEP 4: Detect trends
+#             trends = self.detect_trends(performance_history)
+            
+#             # STEP 5: Generate study plan with specific actions
+#             study_plan = self.generate_study_plan(
+#                 weaknesses, strengths, trends, topic_averages, failure_analysis
+#             )
+            
+#             # STEP 6: Generate AI insights
+#             explanation, motivation = await self.generate_llm_insights(
+#                 strengths, weaknesses, trends, topic_averages, study_plan, failure_analysis
+#             )
+            
+#             # STEP 7: Compile recommendations
+#             topic_recommendations = (
+#                 study_plan["urgent_review"]["topics"] +
+#                 study_plan["skill_building"]["topics"] +
+#                 study_plan["advancement"]["topics"]
+#             )
+            
+#             result = {
+#                 "topic_recommendations": topic_recommendations,
+#                 "study_plan": study_plan,
+#                 "strengths": strengths,
+#                 "weaknesses": weaknesses,
+#                 "trends": trends,
+#                 "motivational_message": motivation,
+#                 "llm_explanation": explanation,
+#                 # NEW: Include failure analysis
+#                 "failure_analysis": failure_analysis
+#             }
+            
+#             logger.info(
+#                 f"Enhanced recommendations: {len(topic_recommendations)} topics, "
+#                 f"{len(failure_analysis.get('specific_improvements', []) if failure_analysis else [])} specific improvements"
+#             )
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+Content-Aware Recommendation Service
+Location: app/services/recommendation_service.py
+"""
+
+# import numpy as np
+# from typing import List, Dict, Tuple, Optional
+# import os
+# import httpx
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from datetime import datetime
+# from collections import Counter
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     Content-aware recommendation system that analyzes actual learning materials
+#     """
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         # Performance thresholds
+#         self.weak_threshold = 0.60
+#         self.strong_threshold = 0.80
+        
+#         logger.info("Content-Aware RecommendationService initialized")
+    
+#     def analyze_question_failures(
+#         self,
+#         question_results: List[Dict]
+#     ) -> Dict:
+#         """Analyze specific questions that were answered incorrectly"""
+#         failures = {
+#             "failed_questions": [],
+#             "weak_question_types": [],
+#             "concepts_to_review": [],
+#             "specific_improvements": []
+#         }
+        
+#         if not question_results:
+#             logger.info("No question results provided for failure analysis")
+#             return failures
+        
+#         # Track performance by question type
+#         type_performance = {}
+        
+#         for result in question_results:
+#             q_type = result.get("question_type", "unknown")
+#             is_correct = result.get("is_correct")
+#             awarded = result.get("awarded_points", 0)
+#             max_points = result.get("max_points", 1)
+            
+#             # Track by type
+#             if q_type not in type_performance:
+#                 type_performance[q_type] = {"correct": 0, "total": 0, "points": 0, "max": 0}
+            
+#             type_performance[q_type]["total"] += 1
+#             type_performance[q_type]["points"] += awarded
+#             type_performance[q_type]["max"] += max_points
+            
+#             # Identify failures (is_correct=False OR scored less than 70%)
+#             score_percentage = (awarded / max_points) if max_points > 0 else 0
+#             if is_correct is False or score_percentage < 0.7:
+#                 failures["failed_questions"].append({
+#                     "question_id": result.get("question_id", "unknown"),
+#                     "type": q_type,
+#                     "points_lost": max_points - awarded,
+#                     "feedback": result.get("feedback", ""),
+#                     "improvements": result.get("improvements", [])
+#                 })
+                
+#                 # Extract specific concepts from improvements
+#                 if result.get("improvements"):
+#                     failures["concepts_to_review"].extend(result["improvements"])
+        
+#         # Identify weak question types (below 70%)
+#         for q_type, stats in type_performance.items():
+#             percentage = (stats["points"] / stats["max"] * 100) if stats["max"] > 0 else 0
+#             if percentage < 70:
+#                 failures["weak_question_types"].append({
+#                     "type": q_type,
+#                     "percentage": round(percentage, 1),
+#                     "questions_attempted": stats["total"]
+#                 })
+        
+#         # Generate specific improvements
+#         failures["specific_improvements"] = self._generate_specific_improvements(
+#             failures["failed_questions"],
+#             failures["weak_question_types"]
+#         )
+        
+#         # Deduplicate concepts
+#         failures["concepts_to_review"] = list(set(failures["concepts_to_review"]))
+        
+#         logger.info(
+#             f"Failure analysis: {len(failures['failed_questions'])} failed, "
+#             f"{len(failures['concepts_to_review'])} concepts to review"
+#         )
+        
+#         return failures
+    
+#     def _generate_specific_improvements(
+#         self,
+#         failed_questions: List[Dict],
+#         weak_types: List[Dict]
+#     ) -> List[str]:
+#         """Generate actionable improvement recommendations"""
+#         improvements = []
+        
+#         # Recommendations based on failed questions
+#         if failed_questions:
+#             improvements.append(
+#                 f"Review the {len(failed_questions)} questions you missed - "
+#                 "understanding your mistakes is key to improvement"
+#             )
+            
+#             # Group by type
+#             type_counts = Counter(q["type"] for q in failed_questions)
+#             for q_type, count in type_counts.most_common(2):
+#                 type_name = self._humanize_question_type(q_type)
+#                 improvements.append(
+#                     f"Practice more {type_name} questions - "
+#                     f"you missed {count} in this area"
+#                 )
+        
+#         # Recommendations based on weak types
+#         for weak in weak_types:
+#             type_name = self._humanize_question_type(weak["type"])
+#             improvements.append(
+#                 f"Strengthen your {type_name} skills - "
+#                 f"currently at {weak['percentage']:.0f}%"
+#             )
+        
+#         return improvements
+    
+#     def _humanize_question_type(self, q_type: str) -> str:
+#         """Convert question type codes to readable names"""
+#         type_map = {
+#             "mcq": "multiple choice",
+#             "multiple_choice": "multiple choice",
+#             "true_false": "true/false",
+#             "short_answer": "short answer",
+#             "essay": "essay",
+#             "practical": "practical"
+#         }
+#         return type_map.get(q_type.lower(), q_type)
+    
+#     def calculate_content_performance(
+#         self,
+#         performance_history: List[Dict]
+#     ) -> Dict[str, Dict]:
+#         """
+#         Calculate performance metrics per content area
+#         Returns: {content_id: {score: float, content: str, performance: float}}
+#         """
+#         content_performance = {}
+        
+#         for record in performance_history:
+#             content_id = record.get("content_id", record.get("topic", "unknown"))
+#             content_text = record.get("content", record.get("topic", ""))
+#             score = record.get("score", 0)
+#             max_score = record.get("max_score", 1)
+#             normalized_score = score / max_score if max_score > 0 else 0
+            
+#             if content_id not in content_performance:
+#                 content_performance[content_id] = {
+#                     "content": content_text,
+#                     "scores": [],
+#                     "total_score": 0,
+#                     "total_max": 0
+#                 }
+            
+#             content_performance[content_id]["scores"].append(normalized_score)
+#             content_performance[content_id]["total_score"] += score
+#             content_performance[content_id]["total_max"] += max_score
+        
+#         # Calculate averages
+#         for content_id, data in content_performance.items():
+#             data["average_performance"] = np.mean(data["scores"])
+#             data["overall_percentage"] = (data["total_score"] / data["total_max"] * 100) if data["total_max"] > 0 else 0
+        
+#         return content_performance
+    
+#     def identify_content_gaps(
+#         self,
+#         content_performance: Dict[str, Dict]
+#     ) -> Tuple[List[Dict], List[Dict]]:
+#         """
+#         Identify strong and weak content areas
+#         Returns: (strengths, weaknesses) with content details
+#         """
+#         strengths = []
+#         weaknesses = []
+        
+#         for content_id, data in content_performance.items():
+#             performance = data["average_performance"]
+#             content_info = {
+#                 "content_id": content_id,
+#                 "content": data["content"],
+#                 "performance": round(performance * 100, 1),
+#                 "score": data["total_score"],
+#                 "max_score": data["total_max"]
+#             }
+            
+#             if performance >= self.strong_threshold:
+#                 strengths.append(content_info)
+#             elif performance < self.weak_threshold:
+#                 weaknesses.append(content_info)
+        
+#         # Sort by performance
+#         strengths.sort(key=lambda x: x["performance"], reverse=True)
+#         weaknesses.sort(key=lambda x: x["performance"])
+        
+#         return strengths, weaknesses
+    
+#     def generate_study_plan(
+#         self,
+#         weaknesses: List[Dict],
+#         strengths: List[Dict],
+#         content_performance: Dict[str, Dict],
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Dict:
+#         """Create content-focused study plan"""
+        
+#         # Priority 1: Failed content (below 60%)
+#         urgent_content = [w for w in weaknesses if w["performance"] < 50]
+        
+#         # Priority 2: Weak content (60-79%)
+#         improvement_content = [w for w in weaknesses if w["performance"] >= 50]
+        
+#         # Priority 3: Strong content (80%+)
+#         advancement_content = strengths[:3]  # Top 3 strengths
+        
+#         # Calculate suggested hours based on performance gap
+#         urgent_hours = sum(3 * (60 - c["performance"]) / 60 for c in urgent_content) if urgent_content else 0
+#         skill_hours = sum(2 * (80 - c["performance"]) / 80 for c in improvement_content) if improvement_content else 0
+#         advance_hours = len(advancement_content) * 1.5 if advancement_content else 0
+        
+#         # Ensure minimums
+#         urgent_hours = max(urgent_hours, 2.0) if urgent_content else 0
+#         skill_hours = max(skill_hours, 2.0) if improvement_content else 0
+#         advance_hours = max(advance_hours, 1.5) if advancement_content else 0
+        
+#         # Build study plan
+#         study_plan = {
+#             "urgent_review": {
+#                 "content_areas": [
+#                     {
+#                         "content": c["content"][:200] + "..." if len(c["content"]) > 200 else c["content"],
+#                         "current_performance": f"{c['performance']:.1f}%",
+#                         "score": f"{c['score']}/{c['max_score']}"
+#                     }
+#                     for c in urgent_content
+#                 ],
+#                 "reason": "Critical gaps - immediate attention needed to build foundation",
+#                 "suggested_hours": round(urgent_hours, 1),
+#                 "specific_actions": []
+#             },
+#             "skill_building": {
+#                 "content_areas": [
+#                     {
+#                         "content": c["content"][:200] + "..." if len(c["content"]) > 200 else c["content"],
+#                         "current_performance": f"{c['performance']:.1f}%",
+#                         "score": f"{c['score']}/{c['max_score']}"
+#                     }
+#                     for c in improvement_content
+#                 ],
+#                 "reason": "Below mastery - focused practice needed",
+#                 "suggested_hours": round(skill_hours, 1),
+#                 "specific_actions": []
+#             },
+#             "advancement": {
+#                 "content_areas": [
+#                     {
+#                         "content": c["content"][:200] + "..." if len(c["content"]) > 200 else c["content"],
+#                         "current_performance": f"{c['performance']:.1f}%",
+#                         "score": f"{c['score']}/{c['max_score']}"
+#                     }
+#                     for c in advancement_content
+#                 ],
+#                 "reason": "Strong foundation - ready for advanced topics",
+#                 "suggested_hours": round(advance_hours, 1),
+#                 "specific_actions": []
+#             }
+#         }
+        
+#         # Add specific actions from failure analysis
+#         if failure_analysis:
+#             concepts = failure_analysis.get("concepts_to_review", [])
+#             weak_types = failure_analysis.get("weak_question_types", [])
+            
+#             # Add to appropriate section
+#             target = "urgent_review" if urgent_content else "skill_building"
+            
+#             if concepts:
+#                 study_plan[target]["specific_actions"].extend([
+#                     f"Review and practice: {concept}" for concept in concepts[:5]
+#                 ])
+            
+#             for weak in weak_types[:3]:
+#                 action = f"Practice {self._humanize_question_type(weak['type'])} questions (currently {weak['percentage']:.0f}%)"
+#                 study_plan[target]["specific_actions"].append(action)
+            
+#             # Add general improvements
+#             improvements = failure_analysis.get("specific_improvements", [])
+#             if improvements:
+#                 study_plan[target]["specific_actions"].extend(improvements[:2])
+        
+#         return study_plan
+    
+#     async def generate_content_insights(
+#         self,
+#         strengths: List[Dict],
+#         weaknesses: List[Dict],
+#         content_performance: Dict[str, Dict],
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Tuple[str, str]:
+#         """Generate AI insights based on actual content"""
+#         if not self.groq_api_key:
+#             return self._fallback_insights(strengths, weaknesses, failure_analysis)
+        
+#         # Build content summary
+#         weak_content_summary = "\n".join([
+#             f"- {w['content'][:150]}... (Performance: {w['performance']:.1f}%)"
+#             for w in weaknesses[:3]
+#         ]) if weaknesses else "None"
+        
+#         strong_content_summary = "\n".join([
+#             f"- {s['content'][:150]}... (Performance: {s['performance']:.1f}%)"
+#             for s in strengths[:3]
+#         ]) if strengths else "None"
+        
+#         # Failure context
+#         failure_context = ""
+#         if failure_analysis:
+#             failed_count = len(failure_analysis.get("failed_questions", []))
+#             concepts = failure_analysis.get("concepts_to_review", [])
+            
+#             if concepts:
+#                 failure_context = f"""
+# Specific Concepts Needing Review:
+# {chr(10).join([f"- {c}" for c in concepts[:5]])}
+
+# Questions Missed: {failed_count}
+# """
+        
+#         system_prompt = """You are an expert TVET instructor analyzing student performance on specific learning content.
+# Provide concrete, actionable feedback focused on the actual content they studied.
+# Be encouraging but specific about what needs improvement."""
+        
+#         user_prompt = f"""Analyze this student's performance on learning content:
+
+# WEAK AREAS (Need immediate attention):
+# {weak_content_summary}
+
+# STRONG AREAS (Well understood):
+# {strong_content_summary}
+
+# {failure_context}
+
+# Generate TWO concise paragraphs (2-3 sentences each):
+# 1. ANALYSIS: What specific content areas they're struggling with and why
+# 2. ENCOURAGEMENT: Motivating message with actionable next steps
+
+# Focus on the actual content, not generic advice."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 300
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     llm_output = result["choices"][0]["message"]["content"].strip()
+                    
+#                     parts = llm_output.split("\n\n")
+#                     analysis = parts[0].strip() if len(parts) > 0 else llm_output
+#                     encouragement = parts[1].strip() if len(parts) > 1 else "Keep practicing!"
+                    
+#                     # Clean markdown
+#                     analysis = analysis.replace("**ANALYSIS:**", "").replace("**Analysis:**", "").strip()
+#                     encouragement = encouragement.replace("**ENCOURAGEMENT:**", "").replace("**Encouragement:**", "").strip()
+                    
+#                     return analysis, encouragement
+#                 else:
+#                     logger.warning(f"LLM API returned status {response.status_code}")
+#                     return self._fallback_insights(strengths, weaknesses, failure_analysis)
+            
+#         except Exception as e:
+#             logger.error(f" LLM insights failed: {e}")
+#             return self._fallback_insights(strengths, weaknesses, failure_analysis)
+    
+#     def _fallback_insights(
+#         self,
+#         strengths: List[Dict],
+#         weaknesses: List[Dict],
+#         failure_analysis: Optional[Dict] = None
+#     ) -> Tuple[str, str]:
+#         """Fallback insights with content focus"""
+        
+#         specific_concepts = ""
+#         if failure_analysis:
+#             concepts = failure_analysis.get("concepts_to_review", [])
+#             if concepts:
+#                 specific_concepts = f" Specifically, focus on: {', '.join(concepts[:3])}."
+        
+#         if weaknesses:
+#             weak_summary = ", ".join([w["content"][:50] + "..." for w in weaknesses[:2]])
+#             analysis = (
+#                 f"Your assessment shows gaps in understanding of {len(weaknesses)} content areas. "
+#                 f"The material on {weak_summary} needs more attention.{specific_concepts} "
+#                 "Targeted review of these specific topics will strengthen your foundation."
+#             )
+#             encouragement = (
+#                 "Learning technical content takes time and repetition. Focus on understanding "
+#                 "the core concepts in your weak areas, and don't hesitate to revisit the material. "
+#                 "Each review session builds stronger understanding!"
+#             )
+#         elif strengths:
+#             strong_summary = strengths[0]["content"][:80] + "..."
+#             analysis = (
+#                 f"Excellent grasp of the material! Your performance on '{strong_summary}' "
+#                 f"and {len(strengths)-1} other areas shows solid understanding."
+#             )
+#             encouragement = (
+#                 "You're demonstrating strong comprehension. Keep up this momentum and "
+#                 "challenge yourself with more complex problems in these areas!"
+#             )
+#         else:
+#             analysis = "You're building your understanding of these technical concepts."
+#             encouragement = (
+#                 "Stay consistent with your studies. Technical mastery comes from "
+#                 "repeated practice and application of concepts!"
+#             )
+        
+#         return analysis, encouragement
+    
+#     async def generate_recommendations(
+#         self,
+#         performance_history: List[Dict],
+#         question_results: Optional[List[Dict]] = None
+#     ) -> Dict:
+#         """Generate content-aware recommendations"""
+#         try:
+#             logger.info(f"🔍 Generating content-aware recommendations for {len(performance_history)} records")
+            
+#             if not performance_history:
+#                 raise ValueError("Performance history cannot be empty")
+            
+#             # STEP 1: Analyze question failures
+#             failure_analysis = None
+#             if question_results:
+#                 failure_analysis = self.analyze_question_failures(question_results)
+#                 logger.info(f"Analyzed {len(question_results)} questions")
+            
+#             # STEP 2: Calculate content-based performance
+#             content_performance = self.calculate_content_performance(performance_history)
+            
+#             # STEP 3: Identify content gaps
+#             strengths, weaknesses = self.identify_content_gaps(content_performance)
+            
+#             # STEP 4: Generate study plan
+#             study_plan = self.generate_study_plan(
+#                 weaknesses, strengths, content_performance, failure_analysis
+#             )
+            
+#             # STEP 5: Generate AI insights
+#             analysis, encouragement = await self.generate_content_insights(
+#                 strengths, weaknesses, content_performance, failure_analysis
+#             )
+            
+#             # STEP 6: Compile recommendations
+#             content_recommendations = [
+#                 {"content": w["content"], "performance": w["performance"]}
+#                 for w in weaknesses
+#             ]
+            
+#             result = {
+#                 "content_recommendations": content_recommendations,
+#                 "study_plan": study_plan,
+#                 "strengths": [{"content": s["content"], "performance": s["performance"]} for s in strengths],
+#                 "weaknesses": [{"content": w["content"], "performance": w["performance"]} for w in weaknesses],
+#                 "analysis": analysis,
+#                 "encouragement": encouragement,
+#                 "failure_analysis": failure_analysis
+#             }
+            
+#             logger.info(
+#                 f" Recommendations generated: {len(weaknesses)} weak areas, "
+#                 f"{len(strengths)} strong areas"
+#             )
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f"Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+
+
+# """
+# Module-Based Recommendation Service
+# Analyzes individual module performance and provides targeted feedback
+# Location: app/services/recommendation_service.py
+# """
+
+# import os
+# import httpx
+# from typing import List, Dict, Optional, Tuple
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from collections import Counter
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """
+#     Module-focused recommendation system that analyzes:
+#     1. Individual module performance
+#     2. Question-level failures
+#     3. Critical gaps in understanding
+#     4. Collective performance feedback
+#     """
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         logger.info("Module-Based RecommendationService initialized")
+    
+#     def analyze_module_performance(
+#         self,
+#         module_content: str,
+#         max_score: float,
+#         question_results: List[Dict]
+#     ) -> Dict:
+#         """
+#         Analyze performance on a single module
+        
+#         Args:
+#             module_content: The actual learning content of the module
+#             max_score: Maximum possible score for the module
+#             question_results: List of question results with student answers
+            
+#         Returns:
+#             Individual module analysis with feedback
+#         """
+#         # Calculate module score
+#         total_awarded = sum(q.get("awarded_marks", 0) for q in question_results)
+#         percentage = (total_awarded / max_score * 100) if max_score > 0 else 0
+        
+#         # Analyze question failures
+#         failed_questions = []
+#         concepts_to_review = []
+#         question_type_performance = {}
+        
+#         for q in question_results:
+#             q_type = q.get("question_type", "unknown")
+#             awarded = q.get("awarded_marks", 0)
+#             max_marks = q.get("max_marks", 1)
+#             is_correct = q.get("is_correct", False)
+            
+#             # Track by type
+#             if q_type not in question_type_performance:
+#                 question_type_performance[q_type] = {"correct": 0, "total": 0}
+            
+#             question_type_performance[q_type]["total"] += 1
+#             if is_correct:
+#                 question_type_performance[q_type]["correct"] += 1
+            
+#             # Identify failures
+#             if not is_correct or awarded < max_marks * 0.7:
+#                 failed_questions.append({
+#                     "question_text": q.get("question_text", ""),
+#                     "student_answer": q.get("student_answer", ""),
+#                     "correct_answer": q.get("correct_answer", ""),
+#                     "awarded_marks": awarded,
+#                     "max_marks": max_marks,
+#                     "question_type": q_type
+#                 })
+                
+#                 # Extract concepts from question content
+#                 concepts_to_review.append(q.get("question_text", "")[:100])
+        
+#         # Performance level
+#         if percentage >= 80:
+#             performance_level = "Excellent"
+#         elif percentage >= 70:
+#             performance_level = "Good"
+#         elif percentage >= 60:
+#             performance_level = "Satisfactory"
+#         else:
+#             performance_level = "Needs Improvement"
+        
+#         return {
+#             "module_content": module_content[:300] + "..." if len(module_content) > 300 else module_content,
+#             "total_score": total_awarded,
+#             "max_score": max_score,
+#             "percentage": round(percentage, 1),
+#             "performance_level": performance_level,
+#             "total_questions": len(question_results),
+#             "failed_questions": len(failed_questions),
+#             "failed_question_details": failed_questions,
+#             "question_type_performance": question_type_performance,
+#             "concepts_to_review": concepts_to_review[:5]
+#         }
+    
+#     def identify_critical_gaps(
+#         self,
+#         module_analyses: List[Dict]
+#     ) -> Dict:
+#         """
+#         Identify critical gaps across all modules
+        
+#         Args:
+#             module_analyses: List of individual module analyses
+            
+#         Returns:
+#             Critical gaps and patterns
+#         """
+#         all_failed_questions = []
+#         weak_modules = []
+#         strong_modules = []
+#         all_question_types = {}
+        
+#         for analysis in module_analyses:
+#             percentage = analysis["percentage"]
+            
+#             # Categorize modules
+#             if percentage < 60:
+#                 weak_modules.append({
+#                     "content": analysis["module_content"],
+#                     "percentage": percentage,
+#                     "failed_count": analysis["failed_questions"]
+#                 })
+#             elif percentage >= 80:
+#                 strong_modules.append({
+#                     "content": analysis["module_content"],
+#                     "percentage": percentage
+#                 })
+            
+#             # Collect failed questions
+#             all_failed_questions.extend(analysis["failed_question_details"])
+            
+#             # Aggregate question type performance
+#             for q_type, stats in analysis["question_type_performance"].items():
+#                 if q_type not in all_question_types:
+#                     all_question_types[q_type] = {"correct": 0, "total": 0}
+#                 all_question_types[q_type]["correct"] += stats["correct"]
+#                 all_question_types[q_type]["total"] += stats["total"]
+        
+#         # Identify weak question types
+#         weak_question_types = []
+#         for q_type, stats in all_question_types.items():
+#             percentage = (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
+#             if percentage < 70:
+#                 weak_question_types.append({
+#                     "type": q_type,
+#                     "percentage": round(percentage, 1),
+#                     "attempted": stats["total"]
+#                 })
+        
+#         # Most common mistakes
+#         mistake_patterns = []
+#         if all_failed_questions:
+#             # Group by similar patterns (simplified - could use more advanced analysis)
+#             mistake_patterns = [
+#                 f"Struggled with {q['question_type']} questions"
+#                 for q in all_failed_questions[:3]
+#             ]
+        
+#         return {
+#             "weak_modules": weak_modules,
+#             "strong_modules": strong_modules,
+#             "weak_question_types": weak_question_types,
+#             "total_failed_questions": len(all_failed_questions),
+#             "critical_gaps": mistake_patterns,
+#             "overall_performance": self._calculate_overall_performance(module_analyses)
+#         }
+    
+#     def _calculate_overall_performance(self, module_analyses: List[Dict]) -> Dict:
+#         """Calculate overall performance across all modules"""
+#         if not module_analyses:
+#             return {"percentage": 0, "level": "No Data"}
+        
+#         total_score = sum(m["total_score"] for m in module_analyses)
+#         total_max = sum(m["max_score"] for m in module_analyses)
+#         percentage = (total_score / total_max * 100) if total_max > 0 else 0
+        
+#         if percentage >= 80:
+#             level = "Excellent"
+#         elif percentage >= 70:
+#             level = "Good"
+#         elif percentage >= 60:
+#             level = "Satisfactory"
+#         else:
+#             level = "Needs Improvement"
+        
+#         return {
+#             "total_score": total_score,
+#             "total_max": total_max,
+#             "percentage": round(percentage, 1),
+#             "level": level
+#         }
+    
+#     async def generate_module_feedback(
+#         self,
+#         module_analysis: Dict
+#     ) -> str:
+#         """Generate AI feedback for individual module"""
+#         if not self.groq_api_key:
+#             return self._fallback_module_feedback(module_analysis)
+        
+#         system_prompt = """You are a supportive TVET instructor providing feedback on module performance.
+# Be specific about what the student did well and what needs improvement.
+# Keep feedback concise (2-3 sentences) and actionable."""
+        
+#         failed_details = "\n".join([
+#             f"- Question: {q['question_text'][:100]}... (Got: {q['student_answer']}, Correct: {q['correct_answer']})"
+#             for q in module_analysis["failed_question_details"][:3]
+#         ]) if module_analysis["failed_question_details"] else "None"
+        
+#         user_prompt = f"""Module Performance Analysis:
+# Module Content: {module_analysis['module_content']}
+# Score: {module_analysis['total_score']}/{module_analysis['max_score']} ({module_analysis['percentage']}%)
+# Performance Level: {module_analysis['performance_level']}
+# Questions Failed: {module_analysis['failed_questions']}/{module_analysis['total_questions']}
+
+# Failed Questions:
+# {failed_details}
+
+# Generate specific feedback (2-3 sentences) on:
+# 1. What the student understood well
+# 2. What specific concepts need more work
+# 3. One actionable recommendation"""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 200
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     return result["choices"][0]["message"]["content"].strip()
+#                 else:
+#                     return self._fallback_module_feedback(module_analysis)
+            
+#         except Exception as e:
+#             logger.error(f" Module feedback generation failed: {e}")
+#             return self._fallback_module_feedback(module_analysis)
+    
+#     def _fallback_module_feedback(self, module_analysis: Dict) -> str:
+#         """Fallback feedback when AI is unavailable"""
+#         percentage = module_analysis["percentage"]
+#         failed = module_analysis["failed_questions"]
+#         total = module_analysis["total_questions"]
+        
+#         if percentage >= 80:
+#             return f"Excellent work on this module! You scored {percentage}% and demonstrated strong understanding of the concepts. Keep up this level of performance."
+#         elif percentage >= 70:
+#             return f"Good performance with {percentage}%. You missed {failed} out of {total} questions. Review the specific concepts from those questions to strengthen your understanding."
+#         elif percentage >= 60:
+#             return f"Satisfactory effort with {percentage}%. Focus on reviewing the {failed} questions you missed, particularly the core concepts. Additional practice will help solidify your knowledge."
+#         else:
+#             return f"This module needs more attention - you scored {percentage}%. Review the learning material carefully, especially the areas covered in the {failed} questions you missed. Consider revisiting the fundamental concepts before moving forward."
+    
+#     async def generate_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Generate overall feedback and recommendations"""
+#         if not self.groq_api_key:
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+        
+#         system_prompt = """You are an experienced TVET instructor providing comprehensive performance feedback.
+# Analyze patterns across multiple modules and provide actionable guidance.
+# Be encouraging but honest about areas needing improvement."""
+        
+#         weak_modules_summary = "\n".join([
+#             f"- {m['content'][:100]}... ({m['percentage']:.1f}%, {m['failed_count']} questions failed)"
+#             for m in critical_gaps["weak_modules"]
+#         ]) if critical_gaps["weak_modules"] else "None"
+        
+#         strong_modules_summary = "\n".join([
+#             f"- {m['content'][:100]}... ({m['percentage']:.1f}%)"
+#             for m in critical_gaps["strong_modules"]
+#         ]) if critical_gaps["strong_modules"] else "None"
+        
+#         user_prompt = f"""Overall Performance Analysis:
+# Overall Score: {critical_gaps['overall_performance']['total_score']}/{critical_gaps['overall_performance']['total_max']} ({critical_gaps['overall_performance']['percentage']:.1f}%)
+# Performance Level: {critical_gaps['overall_performance']['level']}
+
+# Weak Modules (Need Immediate Attention):
+# {weak_modules_summary}
+
+# Strong Modules (Well Understood):
+# {strong_modules_summary}
+
+# Weak Question Types:
+# {', '.join([f"{qt['type']} ({qt['percentage']:.1f}%)" for qt in critical_gaps['weak_question_types']]) if critical_gaps['weak_question_types'] else 'None'}
+
+# Total Failed Questions: {critical_gaps['total_failed_questions']}
+
+# Generate TWO paragraphs (3-4 sentences each):
+# 1. CRITICAL GAPS: Identify the most important areas the student needs to focus on
+# 2. RECOMMENDATIONS: Specific, actionable steps to improve performance"""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 350
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     output = result["choices"][0]["message"]["content"].strip()
+                    
+#                     parts = output.split("\n\n")
+#                     critical_gaps_text = parts[0].strip() if len(parts) > 0 else output
+#                     recommendations = parts[1].strip() if len(parts) > 1 else "Keep practicing and reviewing the material."
+                    
+#                     # Clean markdown
+#                     critical_gaps_text = critical_gaps_text.replace("**CRITICAL GAPS:**", "").replace("**Critical Gaps:**", "").strip()
+#                     recommendations = recommendations.replace("**RECOMMENDATIONS:**", "").replace("**Recommendations:**", "").strip()
+                    
+#                     return critical_gaps_text, recommendations
+#                 else:
+#                     return self._fallback_collective_feedback(critical_gaps, module_analyses)
+            
+#         except Exception as e:
+#             logger.error(f"Collective feedback generation failed: {e}")
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+    
+#     def _fallback_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Fallback collective feedback"""
+#         overall = critical_gaps["overall_performance"]
+#         weak_count = len(critical_gaps["weak_modules"])
+        
+#         if weak_count > 0:
+#             weak_list = ", ".join([m["content"][:50] + "..." for m in critical_gaps["weak_modules"][:2]])
+#             gaps = f"You have critical gaps in {weak_count} modules: {weak_list}. These areas scored below 60% and need immediate attention. Focus on understanding the core concepts before moving to advanced topics."
+            
+#             recommendations = f"Start by thoroughly reviewing the modules where you scored below 60%. Re-read the learning materials, practice the question types you struggled with, and seek help on concepts you don't understand. Dedicate at least 2-3 hours per weak module for review and practice."
+#         else:
+#             gaps = f"Your overall performance is {overall['level']} with {overall['percentage']:.1f}%. You're showing good understanding across most modules."
+#             recommendations = "Continue your current study approach. Focus on maintaining consistency and challenging yourself with more advanced problems in your strong areas."
+        
+#         return gaps, recommendations
+    
+#     async def generate_recommendations(
+#         self,
+#         modules: List[Dict]
+#     ) -> Dict:
+#         """
+#         Generate comprehensive recommendations for all modules
+        
+#         Args:
+#             modules: List of modules, each containing:
+#                 - module_content: str
+#                 - max_score: float
+#                 - question_results: List[Dict]
+                
+#         Returns:
+#             Complete recommendation with individual and collective feedback
+#         """
+#         try:
+#             logger.info(f"🔍 Analyzing {len(modules)} module(s)")
+            
+#             # Analyze each module individually
+#             module_analyses = []
+#             module_feedbacks = []
+            
+#             for idx, module in enumerate(modules):
+#                 logger.info(f" Analyzing module {idx + 1}/{len(modules)}")
+                
+#                 analysis = self.analyze_module_performance(
+#                     module_content=module.get("module_content", ""),
+#                     max_score=module.get("max_score", 0),
+#                     question_results=module.get("question_results", [])
+#                 )
+                
+#                 # Generate AI feedback for this module
+#                 feedback = await self.generate_module_feedback(analysis)
+                
+#                 module_analyses.append(analysis)
+#                 module_feedbacks.append({
+#                     "module_content": analysis["module_content"],
+#                     "score": f"{analysis['total_score']}/{analysis['max_score']}",
+#                     "percentage": analysis["percentage"],
+#                     "performance_level": analysis["performance_level"],
+#                     "feedback": feedback,
+#                     "failed_questions": analysis["failed_questions"],
+#                     "concepts_to_review": analysis["concepts_to_review"]
+#                 })
+            
+#             # Identify critical gaps across all modules
+#             critical_gaps = self.identify_critical_gaps(module_analyses)
+            
+#             # Generate collective feedback
+#             gaps_analysis, recommendations = await self.generate_collective_feedback(
+#                 critical_gaps, module_analyses
+#             )
+            
+#             result = {
+#                 "individual_module_reviews": module_feedbacks,
+#                 "collective_feedback": {
+#                     "overall_performance": critical_gaps["overall_performance"],
+#                     "critical_gaps": gaps_analysis,
+#                     "recommendations": recommendations,
+#                     "weak_modules": critical_gaps["weak_modules"],
+#                     "strong_modules": critical_gaps["strong_modules"],
+#                     "weak_question_types": critical_gaps["weak_question_types"],
+#                     "total_failed_questions": critical_gaps["total_failed_questions"]
+#                 }
+#             }
+            
+#             logger.info(f"Recommendations generated successfully")
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f"Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+
+            # Version 5
+
+
+
+
+
+
+"""
+Module-Based Recommendation Service - FIXED
+Location: app/services/recommendation_service.py
+"""
+
+# import os
+# import httpx
+# from typing import List, Dict, Optional, Tuple
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from collections import Counter
+# import re
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """Module-focused recommendation system"""
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         logger.info("Module-Based RecommendationService initialized")
+    
+#     def _clean_markdown(self, text: str) -> str:
+#         """Remove all markdown formatting from text"""
+#         # Remove bold/italic
+#         text = re.sub(r'\*\*?(.*?)\*\*?', r'\1', text)
+#         # Remove headers
+#         text = re.sub(r'^#+\s+', '', text, flags=re.MULTILINE)
+#         # Remove numbered lists at start
+#         text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
+#         # Clean up extra whitespace
+#         text = re.sub(r'\n\s*\n', '\n\n', text)
+#         return text.strip()
+    
+#     def analyze_module_performance(
+#         self,
+#         module_id: str,
+#         module_name: str,
+#         module_content: str,
+#         max_score: float,
+#         question_results: List[Dict]
+#     ) -> Dict:
+#         """Analyze performance on a single module"""
+        
+#         # Calculate module score
+#         total_awarded = sum(q.get("awarded_marks", 0) for q in question_results)
+#         percentage = (total_awarded / max_score * 100) if max_score > 0 else 0
+        
+#         # Analyze question failures
+#         failed_questions = []
+#         concepts_to_review = []
+#         question_type_performance = {}
+        
+#         for q in question_results:
+#             q_type = q.get("question_type", "unknown")
+#             awarded = q.get("awarded_marks", 0)
+#             max_marks = q.get("max_marks", 1)
+#             is_correct = q.get("is_correct", False)
+            
+#             # Track by type
+#             if q_type not in question_type_performance:
+#                 question_type_performance[q_type] = {"correct": 0, "total": 0}
+            
+#             question_type_performance[q_type]["total"] += 1
+#             if is_correct:
+#                 question_type_performance[q_type]["correct"] += 1
+            
+#             # Identify failures
+#             if not is_correct or awarded < max_marks * 0.7:
+#                 failed_questions.append({
+#                     "question_text": q.get("question_text", ""),
+#                     "student_answer": q.get("student_answer", ""),
+#                     "correct_answer": q.get("correct_answer", ""),
+#                     "awarded_marks": awarded,
+#                     "max_marks": max_marks,
+#                     "question_type": q_type
+#                 })
+                
+#                 # Extract concepts (first 80 chars of question)
+#                 question_text = q.get("question_text", "")
+#                 if question_text:
+#                     concepts_to_review.append(question_text[:80])
+        
+#         # Performance level
+#         if percentage >= 80:
+#             performance_level = "Excellent"
+#         elif percentage >= 70:
+#             performance_level = "Good"
+#         elif percentage >= 60:
+#             performance_level = "Satisfactory"
+#         else:
+#             performance_level = "Needs Improvement"
+        
+#         return {
+#             "module_id": module_id,
+#             "module_name": module_name,
+#             "module_content": module_content,  # Keep for AI analysis
+#             "total_score": total_awarded,
+#             "max_score": max_score,
+#             "percentage": round(percentage, 1),
+#             "performance_level": performance_level,
+#             "total_questions": len(question_results),
+#             "failed_questions": len(failed_questions),
+#             "failed_question_details": failed_questions,
+#             "question_type_performance": question_type_performance,
+#             "concepts_to_review": concepts_to_review[:5]
+#         }
+    
+#     def identify_critical_gaps(
+#         self,
+#         module_analyses: List[Dict]
+#     ) -> Dict:
+#         """Identify critical gaps across all modules"""
+        
+#         all_failed_questions = []
+#         weak_modules = []
+#         strong_modules = []
+#         all_question_types = {}
+        
+#         for analysis in module_analyses:
+#             percentage = analysis["percentage"]
+#             module_id = analysis["module_id"]
+#             module_name = analysis["module_name"]
+            
+#             # Categorize modules
+#             if percentage < 60:
+#                 weak_modules.append({
+#                     "module_id": module_id,
+#                     "module_name": module_name,
+#                     "percentage": percentage,
+#                     "failed_count": analysis["failed_questions"]
+#                 })
+#             elif percentage >= 80:
+#                 strong_modules.append({
+#                     "module_id": module_id,
+#                     "module_name": module_name,
+#                     "percentage": percentage
+#                 })
+            
+#             # Collect failed questions
+#             all_failed_questions.extend(analysis["failed_question_details"])
+            
+#             # Aggregate question type performance
+#             for q_type, stats in analysis["question_type_performance"].items():
+#                 if q_type not in all_question_types:
+#                     all_question_types[q_type] = {"correct": 0, "total": 0}
+#                 all_question_types[q_type]["correct"] += stats["correct"]
+#                 all_question_types[q_type]["total"] += stats["total"]
+        
+#         # Identify weak question types
+#         weak_question_types = []
+#         for q_type, stats in all_question_types.items():
+#             percentage = (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
+#             if percentage < 70:
+#                 weak_question_types.append({
+#                     "type": q_type,
+#                     "percentage": round(percentage, 1),
+#                     "attempted": stats["total"]
+#                 })
+        
+#         return {
+#             "weak_modules": weak_modules,
+#             "strong_modules": strong_modules,
+#             "weak_question_types": weak_question_types,
+#             "total_failed_questions": len(all_failed_questions),
+#             "overall_performance": self._calculate_overall_performance(module_analyses)
+#         }
+    
+#     def _calculate_overall_performance(self, module_analyses: List[Dict]) -> Dict:
+#         """Calculate overall performance across all modules"""
+#         if not module_analyses:
+#             return {"percentage": 0, "level": "No Data"}
+        
+#         total_score = sum(m["total_score"] for m in module_analyses)
+#         total_max = sum(m["max_score"] for m in module_analyses)
+#         percentage = (total_score / total_max * 100) if total_max > 0 else 0
+        
+#         if percentage >= 80:
+#             level = "Excellent"
+#         elif percentage >= 70:
+#             level = "Good"
+#         elif percentage >= 60:
+#             level = "Satisfactory"
+#         else:
+#             level = "Needs Improvement"
+        
+#         return {
+#             "total_score": total_score,
+#             "total_max": total_max,
+#             "percentage": round(percentage, 1),
+#             "level": level
+#         }
+    
+#     async def generate_module_feedback(
+#         self,
+#         module_analysis: Dict
+#     ) -> str:
+#         """Generate AI feedback for individual module"""
+#         if not self.groq_api_key:
+#             return self._fallback_module_feedback(module_analysis)
+        
+#         system_prompt = """You are a supportive TVET instructor providing feedback on module performance.
+# Be specific, constructive, and encouraging. Write in plain text without any markdown formatting.
+# Keep feedback concise (3-4 sentences) and actionable."""
+        
+#         failed_details = "\n".join([
+#             f"Question: {q['question_text'][:100]} | Student: {q['student_answer']} | Correct: {q['correct_answer']}"
+#             for q in module_analysis["failed_question_details"][:3]
+#         ]) if module_analysis["failed_question_details"] else "None"
+        
+#         user_prompt = f"""Module: {module_analysis['module_name']}
+# Score: {module_analysis['total_score']}/{module_analysis['max_score']} ({module_analysis['percentage']}%)
+# Performance Level: {module_analysis['performance_level']}
+# Questions Failed: {module_analysis['failed_questions']}/{module_analysis['total_questions']}
+
+# Failed Questions:
+# {failed_details}
+
+# Provide specific feedback (3-4 sentences) covering:
+# 1. What they did well
+# 2. What needs improvement
+# 3. One concrete action to improve
+
+# Write in plain text without markdown, bullets, or numbering."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 200
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     feedback = result["choices"][0]["message"]["content"].strip()
+#                     return self._clean_markdown(feedback)
+#                 else:
+#                     return self._fallback_module_feedback(module_analysis)
+            
+#         except Exception as e:
+#             logger.error(f" Module feedback generation failed: {e}")
+#             return self._fallback_module_feedback(module_analysis)
+    
+#     def _fallback_module_feedback(self, module_analysis: Dict) -> str:
+#         """Fallback feedback when AI is unavailable"""
+#         percentage = module_analysis["percentage"]
+#         failed = module_analysis["failed_questions"]
+#         total = module_analysis["total_questions"]
+        
+#         if percentage >= 80:
+#             return f"Excellent work on this module! You scored {percentage}% and demonstrated strong understanding of the concepts. Keep up this level of performance."
+#         elif percentage >= 70:
+#             return f"Good performance with {percentage}%. You missed {failed} out of {total} questions. Review the specific concepts from those questions to strengthen your understanding."
+#         elif percentage >= 60:
+#             return f"Satisfactory effort with {percentage}%. Focus on reviewing the {failed} questions you missed, particularly the core concepts. Additional practice will help solidify your knowledge."
+#         else:
+#             return f"This module needs more attention. You scored {percentage}%. Review the learning material carefully, especially the areas covered in the {failed} questions you missed. Consider revisiting the fundamental concepts before moving forward."
+    
+#     async def generate_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Generate overall feedback and recommendations"""
+#         if not self.groq_api_key:
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+        
+#         system_prompt = """You are an experienced TVET instructor providing comprehensive performance feedback.
+# Analyze patterns across modules and provide actionable guidance.
+# Write in plain text without markdown formatting, bullets, or numbering.
+# Be encouraging but honest about areas needing improvement."""
+        
+#         weak_modules_summary = "\n".join([
+#             f"{m['module_name']}: {m['percentage']:.1f}% ({m['failed_count']} questions failed)"
+#             for m in critical_gaps["weak_modules"]
+#         ]) if critical_gaps["weak_modules"] else "None"
+        
+#         strong_modules_summary = "\n".join([
+#             f"{m['module_name']}: {m['percentage']:.1f}%"
+#             for m in critical_gaps["strong_modules"]
+#         ]) if critical_gaps["strong_modules"] else "None"
+        
+#         user_prompt = f"""Overall Performance: {critical_gaps['overall_performance']['total_score']}/{critical_gaps['overall_performance']['total_max']} ({critical_gaps['overall_performance']['percentage']:.1f}%)
+# Level: {critical_gaps['overall_performance']['level']}
+
+# Weak Modules:
+# {weak_modules_summary}
+
+# Strong Modules:
+# {strong_modules_summary}
+
+# Total Failed Questions: {critical_gaps['total_failed_questions']}
+
+# Write TWO paragraphs (3-4 sentences each) in plain text:
+# 1. Identify the most critical gaps and patterns
+# 2. Provide specific, actionable steps to improve
+
+# No markdown, no bullets, just clear prose."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 350
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     output = result["choices"][0]["message"]["content"].strip()
+#                     output = self._clean_markdown(output)
+                    
+#                     parts = output.split("\n\n")
+#                     critical_gaps_text = parts[0].strip() if len(parts) > 0 else output
+#                     recommendations = parts[1].strip() if len(parts) > 1 else "Keep practicing and reviewing the material."
+                    
+#                     return critical_gaps_text, recommendations
+#                 else:
+#                     return self._fallback_collective_feedback(critical_gaps, module_analyses)
+            
+#         except Exception as e:
+#             logger.error(f" Collective feedback generation failed: {e}")
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+    
+#     def _fallback_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Fallback collective feedback"""
+#         overall = critical_gaps["overall_performance"]
+#         weak_count = len(critical_gaps["weak_modules"])
+        
+#         if weak_count > 0:
+#             weak_list = ", ".join([m["module_name"] for m in critical_gaps["weak_modules"][:2]])
+#             gaps = f"You have critical gaps in {weak_count} modules: {weak_list}. These areas scored below 60% and need immediate attention. Focus on understanding the core concepts before moving to advanced topics."
+            
+#             recommendations = f"Start by thoroughly reviewing the modules where you scored below 60%. Re-read the learning materials, practice the question types you struggled with, and seek help on concepts you don't understand. Dedicate at least 2-3 hours per weak module for review and practice."
+#         else:
+#             gaps = f"Your overall performance is {overall['level']} with {overall['percentage']:.1f}%. You're showing good understanding across most modules."
+#             recommendations = "Continue your current study approach. Focus on maintaining consistency and challenging yourself with more advanced problems in your strong areas."
+        
+#         return gaps, recommendations
+    
+#     async def generate_recommendations(
+#         self,
+#         modules: List[Dict]
+#     ) -> Dict:
+#         """Generate comprehensive recommendations for all modules"""
+#         try:
+#             logger.info(f" Analyzing {len(modules)} module(s)")
+            
+#             # Analyze each module individually
+#             module_analyses = []
+#             module_feedbacks = []
+            
+#             for idx, module in enumerate(modules):
+#                 logger.info(f"Analyzing module {idx + 1}/{len(modules)}")
+                
+#                 analysis = self.analyze_module_performance(
+#                     module_id=module.get("module_id", f"module_{idx+1}"),
+#                     module_name=module.get("module_name", f"Module {idx+1}"),
+#                     module_content=module.get("module_content", ""),
+#                     max_score=module.get("max_score", 0),
+#                     question_results=module.get("question_results", [])
+#                 )
+                
+#                 # Generate AI feedback for this module
+#                 feedback = await self.generate_module_feedback(analysis)
+                
+#                 module_analyses.append(analysis)
+#                 module_feedbacks.append({
+#                     "module_id": analysis["module_id"],
+#                     "module_name": analysis["module_name"],
+#                     "score": f"{analysis['total_score']}/{analysis['max_score']}",
+#                     "percentage": analysis["percentage"],
+#                     "performance_level": analysis["performance_level"],
+#                     "feedback": feedback,
+#                     "failed_questions": analysis["failed_questions"],
+#                     "concepts_to_review": analysis["concepts_to_review"]
+#                 })
+            
+#             # Identify critical gaps across all modules
+#             critical_gaps = self.identify_critical_gaps(module_analyses)
+            
+#             # Generate collective feedback
+#             gaps_analysis, recommendations = await self.generate_collective_feedback(
+#                 critical_gaps, module_analyses
+#             )
+            
+#             result = {
+#                 "individual_module_reviews": module_feedbacks,
+#                 "collective_feedback": {
+#                     "overall_performance": critical_gaps["overall_performance"],
+#                     "critical_gaps": gaps_analysis,
+#                     "recommendations": recommendations,
+#                     "weak_modules": critical_gaps["weak_modules"],
+#                     "strong_modules": critical_gaps["strong_modules"],
+#                     "weak_question_types": critical_gaps["weak_question_types"],
+#                     "total_failed_questions": critical_gaps["total_failed_questions"]
+#                 }
+#             }
+            
+#             logger.info(f" Recommendations generated successfully")
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+
+
+
+
+
+
+
+# VERSION 7
+
+
+
+
+
+
+
+
+
+"""
+Module-Based Recommendation Service - SPECIFIC FEEDBACK
+Location: app/services/recommendation_service.py
+"""
+
+# import os
+# import httpx
+# from typing import List, Dict, Optional, Tuple
+# from dotenv import load_dotenv
+# from app.core.logging_config import logger
+# from collections import Counter
+# import re
+
+# load_dotenv()
+
+
+# class RecommendationService:
+#     """Module-focused recommendation system with specific, actionable feedback"""
+    
+#     def __init__(self):
+#         self.groq_api_key = os.getenv("GROQAPI_KEY")
+#         if not self.groq_api_key:
+#             logger.warning(" GROQAPI_KEY not found. Will use fallback recommendations.")
+        
+#         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+#         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+        
+#         logger.info(" Module-Based RecommendationService initialized")
+    
+#     def _clean_markdown(self, text: str) -> str:
+#         """Remove all markdown formatting from text"""
+#         text = re.sub(r'\*\*?(.*?)\*\*?', r'\1', text)
+#         text = re.sub(r'^#+\s+', '', text, flags=re.MULTILINE)
+#         text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
+#         text = re.sub(r'\n\s*\n', '\n\n', text)
+#         return text.strip()
+    
+#     def analyze_module_performance(
+#         self,
+#         module_id: str,
+#         module_name: str,
+#         module_content: str,
+#         max_score: float,
+#         question_results: List[Dict]
+#     ) -> Dict:
+#         """Analyze performance on a single module"""
+        
+#         total_awarded = sum(q.get("awarded_marks", 0) for q in question_results)
+#         percentage = (total_awarded / max_score * 100) if max_score > 0 else 0
+        
+#         failed_questions = []
+#         concepts_to_review = []
+#         question_type_performance = {}
+        
+#         for q in question_results:
+#             q_type = q.get("question_type", "unknown")
+#             awarded = q.get("awarded_marks", 0)
+#             max_marks = q.get("max_marks", 1)
+#             is_correct = q.get("is_correct", False)
+            
+#             if q_type not in question_type_performance:
+#                 question_type_performance[q_type] = {"correct": 0, "total": 0}
+            
+#             question_type_performance[q_type]["total"] += 1
+#             if is_correct:
+#                 question_type_performance[q_type]["correct"] += 1
+            
+#             if not is_correct or awarded < max_marks * 0.7:
+#                 failed_questions.append({
+#                     "question_text": q.get("question_text", ""),
+#                     "student_answer": q.get("student_answer", ""),
+#                     "correct_answer": q.get("correct_answer", ""),
+#                     "awarded_marks": awarded,
+#                     "max_marks": max_marks,
+#                     "question_type": q_type
+#                 })
+                
+#                 question_text = q.get("question_text", "")
+#                 if question_text:
+#                     concepts_to_review.append(question_text[:80])
+        
+#         if percentage >= 80:
+#             performance_level = "Excellent"
+#         elif percentage >= 70:
+#             performance_level = "Good"
+#         elif percentage >= 60:
+#             performance_level = "Satisfactory"
+#         else:
+#             performance_level = "Needs Improvement"
+        
+#         return {
+#             "module_id": module_id,
+#             "module_name": module_name,
+#             "module_content": module_content,
+#             "total_score": total_awarded,
+#             "max_score": max_score,
+#             "percentage": round(percentage, 1),
+#             "performance_level": performance_level,
+#             "total_questions": len(question_results),
+#             "failed_questions": len(failed_questions),
+#             "failed_question_details": failed_questions,
+#             "question_type_performance": question_type_performance,
+#             "concepts_to_review": concepts_to_review[:5]
+#         }
+    
+#     def identify_critical_gaps(
+#         self,
+#         module_analyses: List[Dict]
+#     ) -> Dict:
+#         """Identify critical gaps across all modules"""
+        
+#         all_failed_questions = []
+#         weak_modules = []
+#         strong_modules = []
+#         all_question_types = {}
+        
+#         for analysis in module_analyses:
+#             percentage = analysis["percentage"]
+#             module_id = analysis["module_id"]
+#             module_name = analysis["module_name"]
+            
+#             if percentage < 60:
+#                 weak_modules.append({
+#                     "module_id": module_id,
+#                     "module_name": module_name,
+#                     "percentage": percentage,
+#                     "failed_count": analysis["failed_questions"],
+#                     "content": analysis["module_content"]  # Keep for AI analysis
+#                 })
+#             elif percentage >= 80:
+#                 strong_modules.append({
+#                     "module_id": module_id,
+#                     "module_name": module_name,
+#                     "percentage": percentage,
+#                     "content": analysis["module_content"]
+#                 })
+            
+#             all_failed_questions.extend(analysis["failed_question_details"])
+            
+#             for q_type, stats in analysis["question_type_performance"].items():
+#                 if q_type not in all_question_types:
+#                     all_question_types[q_type] = {"correct": 0, "total": 0}
+#                 all_question_types[q_type]["correct"] += stats["correct"]
+#                 all_question_types[q_type]["total"] += stats["total"]
+        
+#         weak_question_types = []
+#         for q_type, stats in all_question_types.items():
+#             percentage = (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
+#             if percentage < 70:
+#                 weak_question_types.append({
+#                     "type": q_type,
+#                     "percentage": round(percentage, 1),
+#                     "attempted": stats["total"]
+#                 })
+        
+#         return {
+#             "weak_modules": weak_modules,
+#             "strong_modules": strong_modules,
+#             "weak_question_types": weak_question_types,
+#             "total_failed_questions": len(all_failed_questions),
+#             "all_failed_questions": all_failed_questions,
+#             "overall_performance": self._calculate_overall_performance(module_analyses)
+#         }
+    
+#     def _calculate_overall_performance(self, module_analyses: List[Dict]) -> Dict:
+#         """Calculate overall performance across all modules"""
+#         if not module_analyses:
+#             return {"percentage": 0, "level": "No Data"}
+        
+#         total_score = sum(m["total_score"] for m in module_analyses)
+#         total_max = sum(m["max_score"] for m in module_analyses)
+#         percentage = (total_score / total_max * 100) if total_max > 0 else 0
+        
+#         if percentage >= 80:
+#             level = "Excellent"
+#         elif percentage >= 70:
+#             level = "Good"
+#         elif percentage >= 60:
+#             level = "Satisfactory"
+#         else:
+#             level = "Needs Improvement"
+        
+#         return {
+#             "total_score": total_score,
+#             "total_max": total_max,
+#             "percentage": round(percentage, 1),
+#             "level": level
+#         }
+    
+#     async def generate_module_feedback(
+#         self,
+#         module_analysis: Dict
+#     ) -> str:
+#         """Generate AI feedback for individual module"""
+#         if not self.groq_api_key:
+#             return self._fallback_module_feedback(module_analysis)
+        
+#         system_prompt = """You are a supportive TVET instructor providing feedback on module performance.
+# Be specific, constructive, and encouraging. Write in plain text without any markdown formatting.
+# Keep feedback concise (3-4 sentences) and actionable."""
+        
+#         failed_details = "\n".join([
+#             f"Question: {q['question_text'][:100]} | Student: {q['student_answer']} | Correct: {q['correct_answer']}"
+#             for q in module_analysis["failed_question_details"][:3]
+#         ]) if module_analysis["failed_question_details"] else "None"
+        
+#         user_prompt = f"""Module: {module_analysis['module_name']}
+# Score: {module_analysis['total_score']}/{module_analysis['max_score']} ({module_analysis['percentage']}%)
+# Performance Level: {module_analysis['performance_level']}
+# Questions Failed: {module_analysis['failed_questions']}/{module_analysis['total_questions']}
+
+# Failed Questions:
+# {failed_details}
+
+# Provide specific feedback (3-4 sentences) covering:
+# 1. What they did well
+# 2. What needs improvement
+# 3. One concrete action to improve
+
+# Write in plain text without markdown, bullets, or numbering."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 200
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     feedback = result["choices"][0]["message"]["content"].strip()
+#                     return self._clean_markdown(feedback)
+#                 else:
+#                     return self._fallback_module_feedback(module_analysis)
+            
+#         except Exception as e:
+#             logger.error(f"Module feedback generation failed: {e}")
+#             return self._fallback_module_feedback(module_analysis)
+    
+#     def _fallback_module_feedback(self, module_analysis: Dict) -> str:
+#         """Fallback feedback when AI is unavailable"""
+#         percentage = module_analysis["percentage"]
+#         failed = module_analysis["failed_questions"]
+#         total = module_analysis["total_questions"]
+        
+#         if percentage >= 80:
+#             return f"Excellent work on this module! You scored {percentage}% and demonstrated strong understanding of the concepts. Keep up this level of performance."
+#         elif percentage >= 70:
+#             return f"Good performance with {percentage}%. You missed {failed} out of {total} questions. Review the specific concepts from those questions to strengthen your understanding."
+#         elif percentage >= 60:
+#             return f"Satisfactory effort with {percentage}%. Focus on reviewing the {failed} questions you missed, particularly the core concepts. Additional practice will help solidify your knowledge."
+#         else:
+#             return f"This module needs more attention. You scored {percentage}%. Review the learning material carefully, especially the areas covered in the {failed} questions you missed. Consider revisiting the fundamental concepts before moving forward."
+    
+#     async def generate_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Generate specific, actionable collective feedback"""
+#         if not self.groq_api_key:
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+        
+#         system_prompt = """You are an experienced TVET instructor providing specific, actionable feedback.
+# Focus on WHAT CONTENT to study, not which module numbers.
+# Reference specific concepts, topics, and sections from the learning material.
+# Write in plain text without markdown. Be direct and specific."""
+        
+#         # Build detailed context about what they got wrong
+#         weak_content_details = ""
+#         for module in critical_gaps["weak_modules"]:
+#             weak_content_details += f"\n{module['module_name']} ({module['percentage']:.1f}%):\n"
+#             weak_content_details += f"Content covered: {module['content'][:300]}...\n"
+        
+#         # Get specific failed questions
+#         failed_concepts = []
+#         for q in critical_gaps["all_failed_questions"][:8]:
+#             failed_concepts.append(f"- {q['question_text'][:100]}")
+#         failed_concepts_str = "\n".join(failed_concepts) if failed_concepts else "None"
+        
+#         strong_content_details = ""
+#         for module in critical_gaps["strong_modules"]:
+#             strong_content_details += f"\n{module['module_name']} ({module['percentage']:.1f}%): Strong understanding\n"
+        
+#         user_prompt = f"""Overall Performance: {critical_gaps['overall_performance']['percentage']:.1f}%
+
+# WEAK AREAS:
+# {weak_content_details}
+
+# SPECIFIC FAILED CONCEPTS:
+# {failed_concepts_str}
+
+# STRONG AREAS:
+# {strong_content_details}
+
+# Write TWO specific paragraphs (3-4 sentences each):
+
+# PARAGRAPH 1 - CRITICAL GAPS:
+# Identify the SPECIFIC TOPICS and CONCEPTS they need to study. Mention actual content areas like "Lockout/Tagout procedures", "RMS voltage calculations", "the hierarchy of safety controls", etc. Be precise about what they're missing.
+
+# PARAGRAPH 2 - RECOMMENDATIONS:
+# Give CONCRETE study actions. Tell them exactly which topics to review, what to practice, and how to approach weak areas. Reference the actual content they need to master, not just module numbers.
+
+# Write in plain text. No markdown. Be specific and actionable."""
+
+#         try:
+#             async with httpx.AsyncClient(timeout=30.0) as client:
+#                 response = await client.post(
+#                     self.groq_url,
+#                     headers={
+#                         "Authorization": f"Bearer {self.groq_api_key}",
+#                         "Content-Type": "application/json"
+#                     },
+#                     json={
+#                         "model": self.model,
+#                         "messages": [
+#                             {"role": "system", "content": system_prompt},
+#                             {"role": "user", "content": user_prompt}
+#                         ],
+#                         "temperature": 0.7,
+#                         "max_tokens": 400
+#                     }
+#                 )
+                
+#                 if response.status_code == 200:
+#                     result = response.json()
+#                     output = result["choices"][0]["message"]["content"].strip()
+#                     output = self._clean_markdown(output)
+                    
+#                     parts = output.split("\n\n")
+#                     critical_gaps_text = parts[0].strip() if len(parts) > 0 else output
+#                     recommendations = parts[1].strip() if len(parts) > 1 else "Keep practicing and reviewing the material."
+                    
+#                     return critical_gaps_text, recommendations
+#                 else:
+#                     return self._fallback_collective_feedback(critical_gaps, module_analyses)
+            
+#         except Exception as e:
+#             logger.error(f" Collective feedback generation failed: {e}")
+#             return self._fallback_collective_feedback(critical_gaps, module_analyses)
+    
+#     def _fallback_collective_feedback(
+#         self,
+#         critical_gaps: Dict,
+#         module_analyses: List[Dict]
+#     ) -> Tuple[str, str]:
+#         """Specific fallback collective feedback"""
+#         overall = critical_gaps["overall_performance"]
+#         weak_modules = critical_gaps["weak_modules"]
+        
+#         if weak_modules:
+#             # Extract specific content topics from failed questions
+#             failed_topics = set()
+#             for q in critical_gaps["all_failed_questions"][:5]:
+#                 question = q["question_text"]
+#                 # Extract key phrases (simplified - could be more sophisticated)
+#                 if "PPE" in question or "Personal Protective" in question:
+#                     failed_topics.add("Personal Protective Equipment requirements")
+#                 if "LOTO" in question or "Lockout" in question:
+#                     failed_topics.add("Lockout/Tagout procedures")
+#                 if "RMS" in question:
+#                     failed_topics.add("RMS voltage calculations and meaning")
+#                 if "AC" in question and "DC" in question:
+#                     failed_topics.add("AC versus DC current characteristics")
+#                 if "transformer" in question.lower():
+#                     failed_topics.add("transformer operation and power transmission")
+#                 if "hierarchy" in question.lower():
+#                     failed_topics.add("hierarchy of electrical safety controls")
+            
+#             if not failed_topics:
+#                 failed_topics = {f"{m['module_name']} fundamentals" for m in weak_modules[:2]}
+            
+#             topics_list = ", ".join(list(failed_topics)[:4])
+            
+#             gaps = f"You need to strengthen your understanding of several critical concepts: {topics_list}. Your performance shows gaps in these foundational topics that are essential for safe and effective electrical work. These aren't just theoretical - they're practical skills you'll use daily in the field."
+            
+#             # Build specific recommendations
+#             study_items = []
+#             for module in weak_modules[:2]:
+#                 # Extract first major concept from module content
+#                 content = module["content"]
+#                 sentences = content.split(". ")
+#                 if sentences:
+#                     key_concept = sentences[0].strip()
+#                     study_items.append(f"review {key_concept.lower()}")
+            
+#             if not study_items:
+#                 study_items = ["review the fundamental concepts", "practice the question types you missed"]
+            
+#             recommendations = f"Start by focusing on your weakest areas: {' and '.join(study_items[:2])}. Don't just read - actively practice applying these concepts. Work through similar questions, draw diagrams to visualize the processes, and explain the concepts out loud to reinforce your understanding. Spend extra time on {list(failed_topics)[0] if failed_topics else 'core concepts'} since this appeared in multiple questions you missed."
+#         else:
+#             gaps = f"Your overall performance of {overall['percentage']:.1f}% shows {overall['level'].lower()} understanding across all topics. You're demonstrating consistent comprehension of the material."
+#             recommendations = "Continue reinforcing your knowledge through practice. Challenge yourself with more complex scenarios and real-world applications to deepen your expertise."
+        
+#         return gaps, recommendations
+    
+#     async def generate_recommendations(
+#         self,
+#         modules: List[Dict]
+#     ) -> Dict:
+#         """Generate comprehensive recommendations for all modules"""
+#         try:
+#             logger.info(f" Analyzing {len(modules)} module(s)")
+            
+#             module_analyses = []
+#             module_feedbacks = []
+            
+#             for idx, module in enumerate(modules):
+#                 logger.info(f"📚 Analyzing module {idx + 1}/{len(modules)}")
+                
+#                 analysis = self.analyze_module_performance(
+#                     module_id=module.get("module_id", f"module_{idx+1}"),
+#                     module_name=module.get("module_name", f"Module {idx+1}"),
+#                     module_content=module.get("module_content", ""),
+#                     max_score=module.get("max_score", 0),
+#                     question_results=module.get("question_results", [])
+#                 )
+                
+#                 feedback = await self.generate_module_feedback(analysis)
+                
+#                 module_analyses.append(analysis)
+#                 module_feedbacks.append({
+#                     "module_id": analysis["module_id"],
+#                     "module_name": analysis["module_name"],
+#                     "score": f"{analysis['total_score']}/{analysis['max_score']}",
+#                     "percentage": analysis["percentage"],
+#                     "performance_level": analysis["performance_level"],
+#                     "feedback": feedback,
+#                     "failed_questions": analysis["failed_questions"],
+#                     "concepts_to_review": analysis["concepts_to_review"]
+#                 })
+            
+#             critical_gaps = self.identify_critical_gaps(module_analyses)
+            
+#             gaps_analysis, recommendations = await self.generate_collective_feedback(
+#                 critical_gaps, module_analyses
+#             )
+            
+#             result = {
+#                 "individual_module_reviews": module_feedbacks,
+#                 "collective_feedback": {
+#                     "overall_performance": critical_gaps["overall_performance"],
+#                     "critical_gaps": gaps_analysis,
+#                     "recommendations": recommendations,
+#                     "weak_question_types": critical_gaps["weak_question_types"],
+#                     "total_failed_questions": critical_gaps["total_failed_questions"]
+#                 }
+#             }
+            
+#             logger.info(f" Recommendations generated successfully")
+            
+#             return result
+            
+#         except Exception as e:
+#             logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+#             raise
+
+
+
+
+"""
+Module-Based Recommendation Service - FINAL VERSION
+Location: app/services/recommendation_service.py
+"""
+
 import os
 import httpx
+from typing import List, Dict, Optional, Tuple
 from dotenv import load_dotenv
 from app.core.logging_config import logger
-from datetime import datetime
 from collections import Counter
+import re
 
 load_dotenv()
 
 
 class RecommendationService:
-    """
-    Advanced recommendation system that analyzes:
-    1. Overall performance trends
-    2. Specific question failures
-    3. Concept-level weaknesses
-    4. Learning patterns
-    """
+    """Module-focused recommendation system with specific, actionable feedback"""
     
     def __init__(self):
         self.groq_api_key = os.getenv("GROQAPI_KEY")
@@ -3246,326 +5705,220 @@ class RecommendationService:
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
         
-        # Performance thresholds
-        self.weak_threshold = 0.60
-        self.strong_threshold = 0.80
-        
-        logger.info("Enhanced RecommendationService initialized")
+        logger.info(" Module-Based RecommendationService initialized")
     
-    def analyze_question_failures(
+    def _clean_markdown(self, text: str) -> str:
+        """Remove all markdown formatting from text"""
+        text = re.sub(r'\*\*?(.*?)\*\*?', r'\1', text)
+        text = re.sub(r'^#+\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        return text.strip()
+    
+    def _remove_section_references(self, text: str) -> str:
+        """Remove section references like 'section 3.2', 'sections 4.3 and 4.5'"""
+        # Remove patterns like "section X.X", "sections X.X", "section X.X.X"
+        text = re.sub(r'\(sections?\s+[\d\.,\s]+(?:and\s+[\d\.]+)?\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'sections?\s+[\d\.,\s]+(?:and\s+[\d\.]+)?', '', text, flags=re.IGNORECASE)
+        # Remove patterns like "review section X.X in your material"
+        text = re.sub(r',?\s*(?:review|see|refer to|check)\s+sections?\s+[\d\.,\s]+(?:and\s+[\d\.]+)?\s*(?:in your (?:learning )?material)?\.?', '', text, flags=re.IGNORECASE)
+        # Clean up extra spaces and periods
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\s+\.', '.', text)
+        text = re.sub(r'\.+', '.', text)
+        return text.strip()
+    
+    def _remove_paragraph_labels(self, text: str) -> str:
+        """Remove paragraph labels like 'Paragraph 1 - Critical Gaps:', 'Paragraph 2 -'"""
+        text = re.sub(r'^Paragraph\s+\d+\s*[-:]\s*(?:Critical Gaps|Recommendations)?:?\s*\n?', '', text, flags=re.IGNORECASE | re.MULTILINE)
+        text = re.sub(r'\n+Paragraph\s+\d+\s*[-:]\s*(?:Critical Gaps|Recommendations)?:?\s*\n?', '\n\n', text, flags=re.IGNORECASE)
+        return text.strip()
+    
+    def analyze_module_performance(
         self,
+        module_id: str,
+        module_name: str,
+        module_content: str,
+        max_score: float,
         question_results: List[Dict]
     ) -> Dict:
-        """
-        Analyze specific questions that were answered incorrectly.
+        """Analyze performance on a single module"""
         
-        Args:
-            question_results: List of graded question results
-            
-        Returns:
-            Detailed failure analysis with specific recommendations
-        """
-        failures = {
-            "failed_questions": [],
-            "weak_question_types": [],
-            "concepts_to_review": [],
-            "specific_improvements": []
-        }
+        total_awarded = sum(q.get("awarded_marks", 0) for q in question_results)
+        percentage = (total_awarded / max_score * 100) if max_score > 0 else 0
         
-        # Track performance by question type
-        type_performance = {}
+        failed_questions = []
+        concepts_to_review = []
+        question_type_performance = {}
         
-        for result in question_results:
-            q_type = result["question_type"]
-            is_correct = result.get("is_correct")
-            awarded = result["awarded_points"]
-            max_points = result["max_points"]
+        for q in question_results:
+            q_type = q.get("question_type", "unknown")
+            awarded = q.get("awarded_marks", 0)
+            max_marks = q.get("max_marks", 1)
+            is_correct = q.get("is_correct", False)
             
-            # Track by type
-            if q_type not in type_performance:
-                type_performance[q_type] = {"correct": 0, "total": 0, "points": 0, "max": 0}
+            if q_type not in question_type_performance:
+                question_type_performance[q_type] = {"correct": 0, "total": 0}
             
-            type_performance[q_type]["total"] += 1
-            type_performance[q_type]["points"] += awarded
-            type_performance[q_type]["max"] += max_points
+            question_type_performance[q_type]["total"] += 1
+            if is_correct:
+                question_type_performance[q_type]["correct"] += 1
             
-            # Identify failures
-            if is_correct is False or (is_correct is None and awarded < max_points * 0.7):
-                failures["failed_questions"].append({
-                    "question_id": result["question_id"],
-                    "type": q_type,
-                    "points_lost": max_points - awarded,
-                    "feedback": result.get("feedback", ""),
-                    "improvements": result.get("improvements", [])
+            if not is_correct or awarded < max_marks * 0.7:
+                failed_questions.append({
+                    "question_text": q.get("question_text", ""),
+                    "student_answer": q.get("student_answer", ""),
+                    "correct_answer": q.get("correct_answer", ""),
+                    "awarded_marks": awarded,
+                    "max_marks": max_marks,
+                    "question_type": q_type
                 })
                 
-                # Extract specific concepts from improvements
-                if result.get("improvements"):
-                    failures["concepts_to_review"].extend(result["improvements"])
+                # Store full question text for concepts_to_review
+                question_text = q.get("question_text", "")
+                if question_text:
+                    concepts_to_review.append(question_text)
         
-        # Identify weak question types
-        for q_type, stats in type_performance.items():
-            percentage = (stats["points"] / stats["max"] * 100) if stats["max"] > 0 else 0
+        if percentage >= 80:
+            performance_level = "Excellent"
+        elif percentage >= 70:
+            performance_level = "Good"
+        elif percentage >= 60:
+            performance_level = "Satisfactory"
+        else:
+            performance_level = "Needs Improvement"
+        
+        return {
+            "module_id": module_id,
+            "module_name": module_name,
+            "module_content": module_content,
+            "total_score": total_awarded,
+            "max_score": max_score,
+            "percentage": round(percentage, 1),
+            "performance_level": performance_level,
+            "total_questions": len(question_results),
+            "failed_questions": len(failed_questions),
+            "failed_question_details": failed_questions,
+            "question_type_performance": question_type_performance,
+            "concepts_to_review": concepts_to_review  # Full questions now
+        }
+    
+    def identify_critical_gaps(
+        self,
+        module_analyses: List[Dict]
+    ) -> Dict:
+        """Identify critical gaps across all modules"""
+        
+        all_failed_questions = []
+        weak_modules = []
+        strong_modules = []
+        all_question_types = {}
+        
+        for analysis in module_analyses:
+            percentage = analysis["percentage"]
+            module_id = analysis["module_id"]
+            module_name = analysis["module_name"]
+            
+            if percentage < 60:
+                weak_modules.append({
+                    "module_id": module_id,
+                    "module_name": module_name,
+                    "percentage": percentage,
+                    "failed_count": analysis["failed_questions"],
+                    "content": analysis["module_content"]
+                })
+            elif percentage >= 80:
+                strong_modules.append({
+                    "module_id": module_id,
+                    "module_name": module_name,
+                    "percentage": percentage,
+                    "content": analysis["module_content"]
+                })
+            
+            all_failed_questions.extend(analysis["failed_question_details"])
+            
+            for q_type, stats in analysis["question_type_performance"].items():
+                if q_type not in all_question_types:
+                    all_question_types[q_type] = {"correct": 0, "total": 0}
+                all_question_types[q_type]["correct"] += stats["correct"]
+                all_question_types[q_type]["total"] += stats["total"]
+        
+        weak_question_types = []
+        for q_type, stats in all_question_types.items():
+            percentage = (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0
             if percentage < 70:
-                failures["weak_question_types"].append({
+                weak_question_types.append({
                     "type": q_type,
                     "percentage": round(percentage, 1),
-                    "questions_attempted": stats["total"]
+                    "attempted": stats["total"]
                 })
         
-        # Generate specific improvements
-        failures["specific_improvements"] = self._generate_specific_improvements(
-            failures["failed_questions"],
-            failures["weak_question_types"]
-        )
-        
-        # Deduplicate concepts
-        failures["concepts_to_review"] = list(set(failures["concepts_to_review"]))
-        
-        return failures
-    
-    def _generate_specific_improvements(
-        self,
-        failed_questions: List[Dict],
-        weak_types: List[Dict]
-    ) -> List[str]:
-        """Generate actionable improvement recommendations."""
-        improvements = []
-        
-        # Recommendations based on failed questions
-        if failed_questions:
-            improvements.append(
-                f"Review the {len(failed_questions)} questions you missed - "
-                "understanding your mistakes is key to improvement"
-            )
-            
-            # Group by type
-            type_counts = Counter(q["type"] for q in failed_questions)
-            for q_type, count in type_counts.most_common(2):
-                type_name = self._humanize_question_type(q_type)
-                improvements.append(
-                    f"Practice more {type_name} questions - "
-                    f"you missed {count} in this area"
-                )
-        
-        # Recommendations based on weak types
-        for weak in weak_types:
-            type_name = self._humanize_question_type(weak["type"])
-            improvements.append(
-                f"Strengthen your {type_name} skills - "
-                f"currently at {weak['percentage']:.0f}%"
-            )
-        
-        return improvements
-    
-    def _humanize_question_type(self, q_type: str) -> str:
-        """Convert question type codes to readable names."""
-        type_map = {
-            "mcq": "multiple choice",
-            "multiple_choice": "multiple choice",
-            "true_false": "true/false",
-            "short_answer": "short answer",
-            "essay": "essay",
-            "practical": "practical"
+        return {
+            "weak_modules": weak_modules,
+            "strong_modules": strong_modules,
+            "weak_question_types": weak_question_types,
+            "total_failed_questions": len(all_failed_questions),
+            "all_failed_questions": all_failed_questions,
+            "overall_performance": self._calculate_overall_performance(module_analyses)
         }
-        return type_map.get(q_type.lower(), q_type)
     
-    def calculate_performance_metrics(
-        self,
-        performance_history: List[Dict]
-    ) -> Dict[str, float]:
-        """Calculate normalized performance scores per topic."""
-        topic_performance = {}
+    def _calculate_overall_performance(self, module_analyses: List[Dict]) -> Dict:
+        """Calculate overall performance across all modules"""
+        if not module_analyses:
+            return {"percentage": 0, "level": "No Data"}
         
-        for record in performance_history:
-            topic = record["topic"]
-            normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
-            
-            if topic not in topic_performance:
-                topic_performance[topic] = []
-            topic_performance[topic].append(normalized_score)
+        total_score = sum(m["total_score"] for m in module_analyses)
+        total_max = sum(m["max_score"] for m in module_analyses)
+        percentage = (total_score / total_max * 100) if total_max > 0 else 0
         
-        topic_averages = {
-            topic: np.mean(scores)
-            for topic, scores in topic_performance.items()
+        if percentage >= 80:
+            level = "Excellent"
+        elif percentage >= 70:
+            level = "Good"
+        elif percentage >= 60:
+            level = "Satisfactory"
+        else:
+            level = "Needs Improvement"
+        
+        return {
+            "total_score": total_score,
+            "total_max": total_max,
+            "percentage": round(percentage, 1),
+            "level": level
         }
-        
-        return topic_averages
     
-    def identify_strengths_weaknesses(
+    async def generate_module_feedback(
         self,
-        topic_averages: Dict[str, float]
-    ) -> Tuple[List[str], List[str]]:
-        """Classify topics into strengths and weaknesses."""
-        strengths = [
-            topic for topic, score in topic_averages.items()
-            if score >= self.strong_threshold
-        ]
-        
-        weaknesses = [
-            topic for topic, score in topic_averages.items()
-            if score < self.weak_threshold
-        ]
-        
-        return strengths, weaknesses
-    
-    def detect_trends(
-        self,
-        performance_history: List[Dict]
-    ) -> Dict[str, str]:
-        """Detect performance trends: improving, declining, or stable."""
-        topic_trends = {}
-        topic_scores_timeline = {}
-        
-        for record in performance_history:
-            topic = record["topic"]
-            normalized_score = record["score"] / record["max_score"] if record["max_score"] > 0 else 0
-            
-            if topic not in topic_scores_timeline:
-                topic_scores_timeline[topic] = []
-            topic_scores_timeline[topic].append(normalized_score)
-        
-        for topic, scores in topic_scores_timeline.items():
-            if len(scores) < 2:
-                topic_trends[topic] = "insufficient_data"
-                continue
-            
-            recent_avg = np.mean(scores[-3:]) if len(scores) >= 3 else np.mean(scores)
-            early_avg = np.mean(scores[:3]) if len(scores) >= 3 else scores[0]
-            
-            if recent_avg > early_avg + 0.1:
-                topic_trends[topic] = "improving"
-            elif recent_avg < early_avg - 0.1:
-                topic_trends[topic] = "declining"
-            else:
-                topic_trends[topic] = "stable"
-        
-        return topic_trends
-    
-    def generate_study_plan(
-        self,
-        weaknesses: List[str],
-        strengths: List[str],
-        trends: Dict[str, str],
-        topic_averages: Dict[str, float],
-        failure_analysis: Optional[Dict] = None
-    ) -> Dict:
-        """
-        Create a prioritized study plan based on:
-        1. Performance trends
-        2. Weak topics
-        3. Specific question failures
-        """
-        # Priority 1: Declining topics + failed concepts
-        declining_topics = [
-            topic for topic, trend in trends.items()
-            if trend == "declining"
-        ]
-        
-        # Priority 2: Weak topics
-        improvement_topics = [
-            topic for topic in weaknesses
-            if topic not in declining_topics
-        ]
-        
-        # Priority 3: Strong topics showing improvement
-        advancement_topics = [
-            topic for topic in strengths
-            if trends.get(topic) == "improving"
-        ]
-        
-        # Build study plan
-        study_plan = {
-            "urgent_review": {
-                "topics": declining_topics,
-                "reason": "Performance is declining - immediate attention needed",
-                "suggested_hours": len(declining_topics) * 3,
-                "specific_actions": []
-            },
-            "skill_building": {
-                "topics": improvement_topics,
-                "reason": "Below mastery threshold - foundational work needed",
-                "suggested_hours": len(improvement_topics) * 2,
-                "specific_actions": []
-            },
-            "advancement": {
-                "topics": advancement_topics,
-                "reason": "Strong foundation - ready for advanced concepts",
-                "suggested_hours": len(advancement_topics) * 1.5,
-                "specific_actions": []
-            }
-        }
-        
-        # Add specific actions from failure analysis
-        if failure_analysis:
-            # Add concept reviews to urgent/skill-building
-            concepts = failure_analysis.get("concepts_to_review", [])
-            if concepts:
-                if declining_topics:
-                    study_plan["urgent_review"]["specific_actions"].extend([
-                        f"Review: {concept}" for concept in concepts[:3]
-                    ])
-                else:
-                    study_plan["skill_building"]["specific_actions"].extend([
-                        f"Review: {concept}" for concept in concepts[:3]
-                    ])
-            
-            # Add question type practice
-            weak_types = failure_analysis.get("weak_question_types", [])
-            for weak in weak_types:
-                action = f"Practice {self._humanize_question_type(weak['type'])} questions"
-                study_plan["skill_building"]["specific_actions"].append(action)
-        
-        return study_plan
-    
-    async def generate_llm_insights(
-        self,
-        strengths: List[str],
-        weaknesses: List[str],
-        trends: Dict[str, str],
-        topic_averages: Dict[str, float],
-        study_plan: Dict,
-        failure_analysis: Optional[Dict] = None
-    ) -> Tuple[str, str]:
-        """Generate personalized insights based on actual performance."""
+        module_analysis: Dict
+    ) -> str:
+        """Generate AI feedback for individual module"""
         if not self.groq_api_key:
-            return self._fallback_insights(strengths, weaknesses, failure_analysis)
+            return self._fallback_module_feedback(module_analysis)
         
-        # Build context from failure analysis
-        failure_context = ""
-        if failure_analysis:
-            failed_count = len(failure_analysis.get("failed_questions", []))
-            concepts = failure_analysis.get("concepts_to_review", [])
-            weak_types = failure_analysis.get("weak_question_types", [])
-            
-            if failed_count > 0:
-                failure_context = f"""
-Recent Quiz Performance:
-- Questions missed: {failed_count}
-- Concepts needing review: {', '.join(concepts[:5]) if concepts else 'N/A'}
-- Question types to practice: {', '.join([t['type'] for t in weak_types]) if weak_types else 'N/A'}
-"""
+        system_prompt = """You are a supportive TVET instructor providing feedback on module performance.
+Be specific, constructive, and encouraging. Write in plain text without any markdown formatting.
+Do NOT mention section numbers, chapter references, or page numbers.
+Keep feedback concise (3-4 sentences) and actionable."""
         
-        system_prompt = """You are a supportive TVET instructor providing personalized feedback.
-Be specific about what the student needs to work on based on their actual mistakes.
-Reference specific concepts they struggled with."""
+        failed_details = "\n".join([
+            f"Question: {q['question_text'][:100]} | Student: {q['student_answer']} | Correct: {q['correct_answer']}"
+            for q in module_analysis["failed_question_details"][:3]
+        ]) if module_analysis["failed_question_details"] else "None"
         
-        user_prompt = f"""Student Performance Analysis:
-- Strong Topics: {', '.join(strengths) if strengths else 'Still building foundation'}
-- Topics Needing Work: {', '.join(weaknesses) if weaknesses else 'Good progress'}
-- Trends: {trends}
-{failure_context}
+        user_prompt = f"""Module: {module_analysis['module_name']}
+Score: {module_analysis['total_score']}/{module_analysis['max_score']} ({module_analysis['percentage']}%)
+Performance Level: {module_analysis['performance_level']}
+Questions Failed: {module_analysis['failed_questions']}/{module_analysis['total_questions']}
 
-Study Plan:
-- Urgent: {', '.join(study_plan['urgent_review']['topics']) if study_plan['urgent_review']['topics'] else 'None'}
-- Build Skills: {', '.join(study_plan['skill_building']['topics']) if study_plan['skill_building']['topics'] else 'None'}
-- Advance: {', '.join(study_plan['advancement']['topics']) if study_plan['advancement']['topics'] else 'None'}
+Failed Questions:
+{failed_details}
 
-Generate TWO paragraphs (2-3 sentences each):
-1. EXPLANATION: What patterns you see in their learning, specifically addressing their recent mistakes
-2. MOTIVATION: Encouraging message that acknowledges their challenges and provides hope
+Provide specific feedback (3-4 sentences) covering:
+1. What they did well
+2. What needs improvement
+3. One concrete action to improve
 
-Be specific - mention actual concepts they struggled with if available."""
+Write in plain text without markdown, bullets, numbering, or section references."""
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -3582,146 +5935,247 @@ Be specific - mention actual concepts they struggled with if available."""
                             {"role": "user", "content": user_prompt}
                         ],
                         "temperature": 0.7,
-                        "max_tokens": 350
+                        "max_tokens": 200
                     }
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    llm_output = result["choices"][0]["message"]["content"].strip()
-                    
-                    parts = llm_output.split("\n\n")
-                    explanation = parts[0].strip() if len(parts) > 0 else llm_output
-                    motivation = parts[1].strip() if len(parts) > 1 else "Keep working hard!"
-                    
-                    return explanation, motivation
+                    feedback = result["choices"][0]["message"]["content"].strip()
+                    feedback = self._clean_markdown(feedback)
+                    feedback = self._remove_section_references(feedback)
+                    return feedback
                 else:
-                    return self._fallback_insights(strengths, weaknesses, failure_analysis)
+                    return self._fallback_module_feedback(module_analysis)
             
         except Exception as e:
-            logger.error(f"LLM insights failed: {e}")
-            return self._fallback_insights(strengths, weaknesses, failure_analysis)
+            logger.error(f" Module feedback generation failed: {e}")
+            return self._fallback_module_feedback(module_analysis)
     
-    def _fallback_insights(
-        self,
-        strengths: List[str],
-        weaknesses: List[str],
-        failure_analysis: Optional[Dict] = None
-    ) -> Tuple[str, str]:
-        """Enhanced fallback with failure analysis."""
-        concepts_str = ""
-        if failure_analysis:
-            concepts = failure_analysis.get("concepts_to_review", [])
-            if concepts:
-                concepts_str = f" Pay special attention to: {', '.join(concepts[:3])}."
+    def _fallback_module_feedback(self, module_analysis: Dict) -> str:
+        """Fallback feedback when AI is unavailable"""
+        percentage = module_analysis["percentage"]
+        failed = module_analysis["failed_questions"]
+        total = module_analysis["total_questions"]
         
-        if weaknesses:
-            explanation = (
-                f"Your recent quiz shows you need to strengthen your understanding in "
-                f"{len(weaknesses)} areas: {', '.join(weaknesses[:2])}."
-                f"{concepts_str} Focused practice on these concepts will help you improve."
-            )
-            motivation = (
-                "Every expert struggled with difficult concepts at first. "
-                "The fact that you're identifying where you need help shows you're on the right path. "
-                "Keep practicing these specific areas!"
-            )
-        elif strengths:
-            explanation = (
-                f"Excellent work! You're showing strong mastery in {len(strengths)} topics. "
-                "Your consistent performance demonstrates solid understanding."
-            )
-            motivation = (
-                "You're ready to tackle more advanced material. "
-                "Keep up this outstanding work!"
-            )
+        if percentage >= 80:
+            return f"Excellent work on this module! You scored {percentage}% and demonstrated strong understanding of the concepts. Keep up this level of performance."
+        elif percentage >= 70:
+            return f"Good performance with {percentage}%. You missed {failed} out of {total} questions. Review the specific concepts from those questions to strengthen your understanding."
+        elif percentage >= 60:
+            return f"Satisfactory effort with {percentage}%. Focus on reviewing the {failed} questions you missed, particularly the core concepts. Additional practice will help solidify your knowledge."
         else:
-            explanation = "You're building your foundation in these topics."
-            motivation = "Stay consistent with your practice. Progress takes time!"
+            return f"This module needs more attention. You scored {percentage}%. Review the learning material carefully, especially the areas covered in the {failed} questions you missed. Consider revisiting the fundamental concepts before moving forward."
+    
+    async def generate_collective_feedback(
+        self,
+        critical_gaps: Dict,
+        module_analyses: List[Dict]
+    ) -> Tuple[str, str]:
+        """Generate specific, actionable collective feedback"""
+        if not self.groq_api_key:
+            return self._fallback_collective_feedback(critical_gaps, module_analyses)
         
-        return explanation, motivation
+        system_prompt = """You are an experienced TVET instructor providing specific, actionable feedback.
+Focus on WHAT CONTENT to study, not section numbers or chapter references.
+Reference specific concepts, topics, and principles from the learning material.
+Write in plain text without markdown formatting.
+Do NOT mention section numbers, chapter numbers, or page numbers.
+Be direct, specific, and actionable."""
+        
+        # Build detailed context about what they got wrong
+        weak_content_details = ""
+        for module in critical_gaps["weak_modules"]:
+            weak_content_details += f"\n{module['module_name']} ({module['percentage']:.1f}%):\n"
+            weak_content_details += f"Content covered: {module['content'][:300]}...\n"
+        
+        # Get specific failed questions
+        failed_concepts = []
+        for q in critical_gaps["all_failed_questions"][:8]:
+            failed_concepts.append(f"- {q['question_text'][:100]}")
+        failed_concepts_str = "\n".join(failed_concepts) if failed_concepts else "None"
+        
+        strong_content_details = ""
+        for module in critical_gaps["strong_modules"]:
+            strong_content_details += f"\n{module['module_name']} ({module['percentage']:.1f}%): Strong understanding\n"
+        
+        user_prompt = f"""Overall Performance: {critical_gaps['overall_performance']['percentage']:.1f}%
+
+WEAK AREAS:
+{weak_content_details}
+
+SPECIFIC FAILED CONCEPTS:
+{failed_concepts_str}
+
+STRONG AREAS:
+{strong_content_details}
+
+Write TWO specific paragraphs (3-4 sentences each):
+
+FIRST PARAGRAPH:
+Identify the SPECIFIC TOPICS and CONCEPTS they need to study. Mention actual content areas and principles. Be precise about what they're missing. Do NOT mention section numbers.
+
+SECOND PARAGRAPH:
+Give CONCRETE study actions. Tell them exactly which topics to review, what to practice, and how to approach weak areas. Reference the actual content they need to master. Do NOT mention section numbers, chapter references, or page numbers.
+
+Write in plain text. No markdown. No section references. Be specific and actionable."""
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    self.groq_url,
+                    headers={
+                        "Authorization": f"Bearer {self.groq_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": self.model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 400
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    output = result["choices"][0]["message"]["content"].strip()
+                    output = self._clean_markdown(output)
+                    output = self._remove_section_references(output)
+                    output = self._remove_paragraph_labels(output)
+                    
+                    parts = output.split("\n\n")
+                    critical_gaps_text = parts[0].strip() if len(parts) > 0 else output
+                    recommendations = parts[1].strip() if len(parts) > 1 else "Keep practicing and reviewing the material."
+                    
+                    return critical_gaps_text, recommendations
+                else:
+                    return self._fallback_collective_feedback(critical_gaps, module_analyses)
+            
+        except Exception as e:
+            logger.error(f" Collective feedback generation failed: {e}")
+            return self._fallback_collective_feedback(critical_gaps, module_analyses)
+    
+    def _fallback_collective_feedback(
+        self,
+        critical_gaps: Dict,
+        module_analyses: List[Dict]
+    ) -> Tuple[str, str]:
+        """Specific fallback collective feedback"""
+        overall = critical_gaps["overall_performance"]
+        weak_modules = critical_gaps["weak_modules"]
+        
+        if weak_modules:
+            # Extract specific content topics from failed questions
+            failed_topics = set()
+            for q in critical_gaps["all_failed_questions"][:5]:
+                question = q["question_text"]
+                # Extract key phrases
+                if "PPE" in question or "Personal Protective" in question:
+                    failed_topics.add("Personal Protective Equipment requirements")
+                if "LOTO" in question or "Lockout" in question:
+                    failed_topics.add("Lockout/Tagout procedures")
+                if "RMS" in question:
+                    failed_topics.add("RMS voltage calculations and meaning")
+                if "AC" in question and "DC" in question:
+                    failed_topics.add("AC versus DC current characteristics")
+                if "transformer" in question.lower():
+                    failed_topics.add("transformer operation and power transmission")
+                if "hierarchy" in question.lower():
+                    failed_topics.add("hierarchy of electrical safety controls")
+                if "AWG" in question:
+                    failed_topics.add("AWG wire sizing system")
+                if "ampacity" in question.lower():
+                    failed_topics.add("wire ampacity ratings")
+                if "grounding" in question.lower() and "bonding" in question.lower():
+                    failed_topics.add("difference between grounding and bonding")
+                if "GFCI" in question:
+                    failed_topics.add("GFCI operation and specifications")
+            
+            if not failed_topics:
+                failed_topics = {f"{m['module_name']} fundamentals" for m in weak_modules[:2]}
+            
+            topics_list = ", ".join(list(failed_topics)[:4])
+            
+            gaps = f"You need to strengthen your understanding of several critical concepts: {topics_list}. Your performance shows gaps in these foundational topics that are essential for safe and effective electrical work. These aren't just theoretical - they're practical skills you'll use daily in the field."
+            
+            # Build specific recommendations
+            study_items = []
+            for module in weak_modules[:2]:
+                content = module["content"]
+                sentences = content.split(". ")
+                if sentences:
+                    key_concept = sentences[0].strip()
+                    study_items.append(f"review {key_concept.lower()}")
+            
+            if not study_items:
+                study_items = ["review the fundamental concepts", "practice the question types you missed"]
+            
+            recommendations = f"Start by focusing on your weakest areas: {' and '.join(study_items[:2])}. Don't just read - actively practice applying these concepts. Work through similar questions, draw diagrams to visualize the processes, and explain the concepts out loud to reinforce your understanding. Spend extra time on {list(failed_topics)[0] if failed_topics else 'core concepts'} since this appeared in multiple questions you missed."
+        else:
+            gaps = f"Your overall performance of {overall['percentage']:.1f}% shows {overall['level'].lower()} understanding across all topics. You're demonstrating consistent comprehension of the material."
+            recommendations = "Continue reinforcing your knowledge through practice. Challenge yourself with more complex scenarios and real-world applications to deepen your expertise."
+        
+        return gaps, recommendations
     
     async def generate_recommendations(
         self,
-        performance_history: List[Dict],
-        topic_scores: Optional[Dict[str, float]] = None,
-        question_results: Optional[List[Dict]] = None
+        modules: List[Dict]
     ) -> Dict:
-        """
-        Generate comprehensive recommendations with question-level analysis.
-        
-        Args:
-            performance_history: Historical performance records
-            topic_scores: Optional topic scores
-            question_results: NEW - Actual question results from latest quiz
-            
-        Returns:
-            Complete recommendation with specific, actionable feedback
-        """
+        """Generate comprehensive recommendations for all modules"""
         try:
-            logger.info(f"Generating enhanced recommendations")
+            logger.info(f" Analyzing {len(modules)} module(s)")
             
-            # STEP 1: Analyze specific question failures (NEW!)
-            failure_analysis = None
-            if question_results:
-                failure_analysis = self.analyze_question_failures(question_results)
-                logger.info(
-                    f"Analyzed {len(question_results)} questions, "
-                    f"found {len(failure_analysis['failed_questions'])} failures"
+            module_analyses = []
+            module_feedbacks = []
+            
+            for idx, module in enumerate(modules):
+                logger.info(f" Analyzing module {idx + 1}/{len(modules)}")
+                
+                analysis = self.analyze_module_performance(
+                    module_id=module.get("module_id", f"module_{idx+1}"),
+                    module_name=module.get("module_name", f"Module {idx+1}"),
+                    module_content=module.get("module_content", ""),
+                    max_score=module.get("max_score", 0),
+                    question_results=module.get("question_results", [])
                 )
+                
+                feedback = await self.generate_module_feedback(analysis)
+                
+                module_analyses.append(analysis)
+                module_feedbacks.append({
+                    "module_id": analysis["module_id"],
+                    "module_name": analysis["module_name"],
+                    "score": f"{analysis['total_score']}/{analysis['max_score']}",
+                    "percentage": analysis["percentage"],
+                    "performance_level": analysis["performance_level"],
+                    "feedback": feedback,
+                    "concepts_to_review": analysis["concepts_to_review"]  # Full questions
+                })
             
-            # STEP 2: Calculate overall performance metrics
-            topic_averages = self.calculate_performance_metrics(performance_history)
+            critical_gaps = self.identify_critical_gaps(module_analyses)
             
-            if topic_scores:
-                normalized_scores = {
-                    k: min(max(v, 0.0), 1.0)
-                    for k, v in topic_scores.items()
-                }
-                topic_averages.update(normalized_scores)
-            
-            # STEP 3: Identify strengths and weaknesses
-            strengths, weaknesses = self.identify_strengths_weaknesses(topic_averages)
-            
-            # STEP 4: Detect trends
-            trends = self.detect_trends(performance_history)
-            
-            # STEP 5: Generate study plan with specific actions
-            study_plan = self.generate_study_plan(
-                weaknesses, strengths, trends, topic_averages, failure_analysis
-            )
-            
-            # STEP 6: Generate AI insights
-            explanation, motivation = await self.generate_llm_insights(
-                strengths, weaknesses, trends, topic_averages, study_plan, failure_analysis
-            )
-            
-            # STEP 7: Compile recommendations
-            topic_recommendations = (
-                study_plan["urgent_review"]["topics"] +
-                study_plan["skill_building"]["topics"] +
-                study_plan["advancement"]["topics"]
+            gaps_analysis, recommendations = await self.generate_collective_feedback(
+                critical_gaps, module_analyses
             )
             
             result = {
-                "topic_recommendations": topic_recommendations,
-                "study_plan": study_plan,
-                "strengths": strengths,
-                "weaknesses": weaknesses,
-                "trends": trends,
-                "motivational_message": motivation,
-                "llm_explanation": explanation,
-                # NEW: Include failure analysis
-                "failure_analysis": failure_analysis
+                "individual_module_reviews": module_feedbacks,
+                "collective_feedback": {
+                    "overall_performance": critical_gaps["overall_performance"],
+                    "critical_gaps": gaps_analysis,
+                    "recommendations": recommendations,
+                    "weak_question_types": critical_gaps["weak_question_types"],
+                    "total_failed_questions": critical_gaps["total_failed_questions"]
+                }
             }
             
-            logger.info(
-                f"Enhanced recommendations: {len(topic_recommendations)} topics, "
-                f"{len(failure_analysis.get('specific_improvements', []) if failure_analysis else [])} specific improvements"
-            )
+            logger.info(f"Recommendations generated successfully")
             
             return result
             
         except Exception as e:
-            logger.error(f" Recommendation generation failed: {e}", exc_info=True)
+            logger.error(f"Recommendation generation failed: {e}", exc_info=True)
             raise
