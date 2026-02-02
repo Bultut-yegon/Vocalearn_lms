@@ -1250,6 +1250,8 @@ async def analyze_performance(request: RecommendationRequest):
         result = await recommendation_service.generate_recommendations(modules)
         
         # Build response with proper nested models
+
+        
         individual_reviews = [
             ModuleReview(**review)
             for review in result["individual_module_reviews"]
