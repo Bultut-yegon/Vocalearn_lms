@@ -1,8 +1,12 @@
-# 🎓 VocaLearn AI Services
+# VocaLearn AI Services
 
 **AI-Powered Learning Management System for TVET Education**
 
-A comprehensive suite of AI services designed to revolutionize Technical and Vocational Education and Training (TVET) through intelligent recommendations, automated grading, and adaptive quiz generation. Built specifically for trades education including electrical wiring, plumbing, and other vocational skills.
+A comprehensive suite of AI services designed to revolutionize Technical and Vocational Education and Training (TVET) through intelligent quiz generation, automated grading, and personalized recommendations. Built specifically for trades education including electrical wiring, plumbing, HVAC, and other vocational skills.
+
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
@@ -14,11 +18,13 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Running the Application](#-running-the-application)
+- [Services Overview](#-services-overview)
 - [API Documentation](#-api-documentation)
 - [Usage Examples](#-usage-examples)
 - [Integration Guide](#-integration-guide)
 - [Testing](#-testing)
 - [Troubleshooting](#-troubleshooting)
+- [Deployment](#-deployment)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -26,31 +32,32 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ##  Features
 
-###  AI-Powered Recommendation System
-- **Personalized Learning Paths**: Analyzes student performance to create tailored study plans
-- **Performance Trend Analysis**: Detects improving, declining, or stable performance patterns
-- **Intelligent Prioritization**: Creates 3-tier study plans (urgent review, skill building, advancement)
-- **Progress Tracking**: Monitors improvement over time with detailed comparisons
-- **Motivational Insights**: Generates encouraging, context-aware feedback using LLM
-
-###  Auto-Grading System
-- **Dual Grading Modes**: 
-  - Fast deterministic grading for MCQs and True/False questions
-  - AI-powered evaluation for open-ended responses (essays, short answers, practical scenarios)
-- **Partial Credit Support**: Fair scoring for partially correct answers
-- **Detailed Feedback**: Per-question analysis with strengths and improvement areas
-- **Rubric-Based Evaluation**: Consistent, criteria-driven assessment
-- **Topic Mastery Analysis**: Identifies specific knowledge gaps
-- **Batch Processing**: Grade entire class submissions efficiently
-
-###  Quiz Generation System
-- **One-Click Generation**: Create assessments instantly with sensible defaults
-- **Adaptive Quizzes**: Personalized questions based on student performance
-- **Multiple Question Types**: MCQ, True/False, Short Answer, Essay, Practical scenarios
+###  AI-Powered Quiz Generation
+- **Instant Quiz Creation**: Generate comprehensive assessments from course content in seconds
+- **Multiple Question Types**: MCQ, True/False, Short Answer
 - **Difficulty Levels**: Beginner, Intermediate, Advanced
-- **Bulk Generation**: Create quizzes for multiple topics simultaneously
-- **Curriculum Integration**: Incorporate reference materials and avoid covered topics
-- **Smart Duration Estimation**: Calculates expected completion time
+- **Content-Based Generation**: Questions derived directly from learning materials
+- **Smart Distractors**: AI-generated plausible wrong answers for MCQs
+- **Rubric Creation**: Automatic grading criteria for open-ended questions
+
+###  Intelligent Auto-Grading System
+- **Dual Grading Modes**: 
+  - **Deterministic**: Instant grading for MCQs and True/False (< 100ms)
+  - **AI-Powered**: LLM evaluation for short answers and essays (3-5 seconds)
+- **Fair Partial Credit**: Rewards partially correct answers appropriately
+- **Detailed Feedback**: Specific strengths and improvement areas per question
+- **Keyword Fallback**: Ensures grading works even without LLM access
+- **Batch Processing**: Grade entire class submissions efficiently
+- **Letter Grades**: Automatic A-F grade assignment
+
+### 🎓 Content-Aware Recommendation System
+- **Module-Level Analysis**: Individual feedback for each learning module
+- **Specific Content References**: No generic "review module 1" - tells students exactly what topics to study
+- **Actionable Study Plans**: Concrete steps like "memorize AWG/ampacity pairs, practice RMS calculations"
+- **Question-Level Insights**: Shows actual questions missed for targeted review
+- **Performance Tracking**: Overall scores and weak question type identification
+- **AI-Generated Feedback**: Personalized, encouraging insights using LLM
+- **No Redundancy**: Clean output focused on what matters
 
 ---
 
@@ -58,18 +65,20 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│              FastAPI Application (Python)                │
+│              FastAPI Application (Python 3.11+)         │
 │                                                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │Recommendation│  │ Auto-Grading │  │Quiz Generator│ │
-│  │   Service    │  │   Service    │  │   Service    │ │
+│  │    Quiz      │  │   Grading    │  │Recommendation│ │
+│  │  Generation  │  │   Service    │  │   Service    │ │
+│  │   Service    │  │              │  │              │ │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │
 │         │                  │                  │         │
 │         └──────────────────┴──────────────────┘         │
 │                            │                            │
 │                     ┌──────▼──────┐                     │
 │                     │  Groq API   │                     │
-│                     │ (LLM Engine)│                     │
+│                     │(Llama 3.1/  │                     │
+│                     │  3.3 LLMs)  │                     │
 │                     └─────────────┘                     │
 └─────────────────────────────────────────────────────────┘
                             ▲
@@ -77,25 +86,33 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
                             ▼
               ┌──────────────────────────┐
               │   Spring Boot Backend    │
-              │      (Java/Kotlin)       │
+              │   (Your LMS Backend)     │
               └──────────────────────────┘
 ```
+
+**Technology Stack:**
+- **Framework**: FastAPI (async, high-performance)
+- **LLM Provider**: Groq (fast inference, free tier available)
+- **Models**: Llama 3.1 (8B) for recommendations/grading, Llama 3.3 (70B) for quiz generation
+- **Validation**: Pydantic v2
+- **HTTP Client**: httpx (async)
+- **Environment**: python-dotenv
 
 ---
 
 ##  Prerequisites
 
-Before you begin, ensure you have the following installed:
-
+### Required Software
 - **Python 3.11+** ([Download](https://www.python.org/downloads/))
 - **pip** (comes with Python)
 - **Git** ([Download](https://git-scm.com/downloads))
-- **Groq API Key** (Free - [Sign up here](https://console.groq.com/))
+- **Groq API Key** ([Free Sign-up](https://console.groq.com/))
 
 ### System Requirements
 - **RAM**: Minimum 4GB (8GB recommended)
-- **Storage**: At least 500MB free space
-- **OS**: Linux, macOS, or Windows
+- **Storage**: 500MB free space
+- **OS**: Linux, macOS, or Windows 10+
+- **Internet**: Required for LLM API calls
 
 ---
 
@@ -110,13 +127,13 @@ cd vocalearn_ai
 
 ### Step 2: Create Virtual Environment
 
-**On Linux/macOS:**
+**Linux/macOS:**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-**On Windows:**
+**Windows:**
 ```cmd
 python -m venv .venv
 .venv\Scripts\activate
@@ -129,7 +146,12 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Expected installation time**: 2-3 minutes
+**Installation time**: ~2-3 minutes
+
+**Verify installation:**
+```bash
+pip list | grep -E "fastapi|uvicorn|groq|pydantic|httpx"
+```
 
 ---
 
@@ -137,83 +159,79 @@ pip install -r requirements.txt
 
 ### Step 1: Create Environment File
 
-Create a `.env` file in the project root:
-
 ```bash
-touch .env  # Linux/macOS
-# OR
-type nul > .env  # Windows
+# Linux/macOS
+touch .env
+
+# Windows
+type nul > .env
 ```
 
-### Step 2: Add Configuration
+### Step 2: Configure Settings
 
-Open `.env` and add the following:
+Add to `.env`:
 
 ```env
 # Required: Groq API Configuration
 GROQAPI_KEY=your_groq_api_key_here
 
-# Optional: LLM Configuration
+# Optional: Model Configuration
 LLM_MODEL=llama-3.1-8b-instant
 
-# Optional: Application Environment
+# Optional: Environment
 ENV=dev
 
-# Optional: CORS Configuration (for production)
+# Optional: CORS (for production)
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+
+# Optional: Server Configuration
+HOST=0.0.0.0
+PORT=8000
 ```
 
 ### Getting Your Groq API Key
 
-1. Visit [https://console.groq.com/](https://console.groq.com/)
-2. Sign up for a free account
-3. Navigate to API Keys section
-4. Create a new API key
-5. Copy and paste it into your `.env` file
+1. Visit [Groq Console](https://console.groq.com/)
+2. Create free account
+3. Navigate to "API Keys"
+4. Generate new key
+5. Copy to `.env` file
 
-**Note**: Groq offers free API access with generous rate limits, perfect for development and production use.
+**Note**: Groq offers generous free tier - perfect for development and production.
 
 ---
 
 ##  Running the Application
 
-### Start the Server
+### Development Mode (with auto-reload)
 
-**Development Mode (with auto-reload):**
 ```bash
-python -m uvicorn app.main:app --reload --port 8000
+python main.py
 ```
 
-**Production Mode:**
+Or:
+
 ```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Important: Create log directories first
+### Production Mode
+
 ```bash
-mkdir -p logs cache
-chmod 777 logs cache
-docker-compose up -d
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Docker (Recommended for Production)
+
+```bash
+# Build image
+docker build -t vocalearn-ai .
+
+# Run container
+docker run -d -p 8000:8000 --env-file .env vocalearn-ai
 ```
 
 ### Verify Server is Running
-
-You should see output like:
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [12345] using WatchFiles
-INFO:     Started server process [12346]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-```
-
-### Access API Documentation
-
-Open your browser and visit:
-- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
-### Health Check
 
 ```bash
 curl http://localhost:8000/health
@@ -222,8 +240,151 @@ curl http://localhost:8000/health
 Expected response:
 ```json
 {
-  "status": "ok",
-  "service": "AI Learning Services"
+  "status": "healthy",
+  "service": "AI Learning Services",
+  "version": "1.0.0"
+}
+```
+
+### Access Documentation
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **API Info**: http://localhost:8000/
+
+---
+
+##  Services Overview
+
+### 1. Quiz Generation Service
+
+**Purpose**: Generate educational assessments from course content
+
+**Features**:
+- Multiple choice questions with 4 options
+- True/False statements with explanations
+- Short answer questions with rubrics
+- Content-aware generation (questions based on actual material)
+- Difficulty level control
+- JSON output format
+
+**Models Used**: Llama 3.3 70B Versatile (high quality generation)
+
+**Sample Output**:
+```json
+{
+  "quiz_id": "quiz_abc123def456",
+  "difficulty_level": "intermediate",
+  "multiple_choice": [
+    {
+      "question": "What is the primary function of a circuit breaker?",
+      "options": {
+        "A": "Store electricity",
+        "B": "Protect from overcurrent",
+        "C": "Convert voltage",
+        "D": "Generate power"
+      },
+      "correct_answer": "B",
+      "explanation": "Circuit breakers protect circuits from overcurrent..."
+    }
+  ],
+  "true_false": [...],
+  "short_answer": [...],
+  "total_questions": 10
+}
+```
+
+### 2. Grading Service
+
+**Purpose**: Automatically grade student quiz submissions
+
+**Features**:
+- **Closed-ended grading**: MCQ and True/False (instant)
+- **Open-ended grading**: Short answers using LLM evaluation
+- **Partial credit**: Fair scoring for partially correct answers
+- **Detailed feedback**: Per-question strengths and improvements
+- **Fallback grading**: Keyword matching when LLM unavailable
+- **Letter grades**: Automatic A-F assignment
+
+**Models Used**: Llama 3.1 8B Instant (fast, accurate evaluation)
+
+**Grading Scale**:
+- A: 90-100%
+- B: 80-89%
+- C: 70-79%
+- D: 60-69%
+- F: Below 60%
+
+**Sample Output**:
+```json
+{
+  "submission_id": "sub_001",
+  "student_id": "student_123",
+  "total_points": 85.5,
+  "max_points": 100,
+  "percentage": 85.5,
+  "grade_letter": "B",
+  "question_results": [
+    {
+      "question_id": "q1",
+      "awarded_points": 5,
+      "max_points": 5,
+      "is_correct": true,
+      "feedback": "Correct! Well done."
+    }
+  ]
+}
+```
+
+### 3. Recommendation Service
+
+**Purpose**: Provide personalized, content-specific learning recommendations
+
+**Features**:
+- **Module-level analysis**: Individual feedback per module
+- **Content-specific gaps**: Identifies exact topics needing review (e.g., "AWG wire sizing", "RMS calculations")
+- **Actionable recommendations**: Concrete study steps, not generic advice
+- **Question review**: Shows actual failed questions for targeted practice
+- **AI-generated insights**: Personalized feedback and encouragement
+- **Performance tracking**: Overall scores and weak question types
+
+**Models Used**: Llama 3.1 8B Instant (personalized feedback generation)
+
+**Key Difference**: Unlike generic systems, this tells students EXACTLY what content to study:
+-  Generic: "Review Module 1 and Module 2"
+-  Specific: "Master the AWG wire numbering system (smaller numbers = larger wires), ampacity ratings (14 AWG = 15A, 12 AWG = 20A), and I²R heating physics"
+
+**Sample Output**:
+```json
+{
+  "student_id": "student_123",
+  "individual_module_reviews": [
+    {
+      "module_id": "wire_101",
+      "module_name": "Wire Sizing",
+      "score": "15/30",
+      "percentage": 50.0,
+      "performance_level": "Needs Improvement",
+      "feedback": "You're struggling with AWG numbering...",
+      "concepts_to_review": [
+        "In the AWG system, does a smaller number indicate...",
+        "What is the ampacity rating for 14 AWG..."
+      ]
+    }
+  ],
+  "collective_feedback": {
+    "overall_performance": {
+      "total_score": 45,
+      "total_max": 100,
+      "percentage": 45.0,
+      "level": "Needs Improvement"
+    },
+    "critical_gaps": "You need to master the AWG wire numbering system (smaller numbers = larger wires), ampacity ratings (14 AWG = 15A, 12 AWG = 20A), the physics of why undersized wires create fire hazards through I²R heating...",
+    "recommendations": "Create flashcards for AWG/ampacity pairs. Draw diagrams showing wire sizing relationships. Practice I²R power loss calculations...",
+    "weak_question_types": [
+      {"type": "short_answer", "percentage": 40.0, "attempted": 10}
+    ]
+  }
 }
 ```
 
@@ -233,219 +394,198 @@ Expected response:
 
 ### Base URL
 ```
-http://localhost:8000/api
+http://localhost:8000/api/v1
 ```
 
-### Service Endpoints
+---
 
-#### 1. Recommendation System
+### Quiz Generation Endpoints
 
-**Analyze Performance**
-```http
-POST /api/recommendation/analyze
-Content-Type: application/json
+#### Generate Weekly Quiz
 
+**Endpoint**: `POST /api/v1/quiz/generate-weekly`
+
+**Request**:
+```json
 {
-  "performance_history": [
-    {
-      "topic": "Basic Wiring",
-      "score": 85,
-      "max_score": 100
-    }
-  ],
-  "topic_scores": {}
+  "combined_content": "Electrical Safety: PPE includes insulated gloves, safety glasses...",
+  "difficulty_level": "intermediate",
+  "num_mcq": 5,
+  "num_true_false": 3,
+  "num_short_answer": 2
 }
 ```
 
-**Track Improvement**
-```http
-POST /api/recommendation/track-improvement
-Content-Type: application/json
+**Response**: Quiz with MCQ, T/F, and short answer questions
 
+**Use Case**: Generate a complete weekly assessment from module content
+
+---
+
+### Grading Endpoints
+
+#### Grade Quiz Submission
+
+**Endpoint**: `POST /api/v1/grading/grade`
+
+**Request**:
+```json
 {
-  "student_id": "ST001",
-  "current_metrics": {
-    "Basic Wiring": 0.85,
-    "Pipe Fitting": 0.65
+  "submission_id": "sub_001",
+  "student_id": "student_123",
+  "quiz_data": {
+    "quiz_id": "quiz_001",
+    "multiple_choice": [...],
+    "true_false": [...],
+    "short_answer": [...]
   },
-  "previous_metrics": {
-    "Basic Wiring": 0.75,
-    "Pipe Fitting": 0.60
+  "student_answers": {
+    "mcq_0": "B",
+    "tf_0": "true",
+    "sa_0": "Circuit breakers protect from overcurrent..."
   }
 }
 ```
 
-**Generate Report**
-```http
-POST /api/recommendation/generate-report
-Content-Type: application/json
+**Response**: Graded results with scores, feedback, and letter grade
 
+**Use Case**: Grade a student's quiz submission automatically
+
+---
+
+### Recommendation Endpoints
+
+#### Analyze Student Performance
+
+**Endpoint**: `POST /api/v1/recommendations/analyze`
+
+**Request**:
+```json
 {
-  "student_id": "ST001",
-  "student_name": "John Doe",
-  "performance_history": [...],
-  "topic_scores": {}
-}
-```
-
-#### 2. Auto-Grading System
-
-**Grade Submission**
-```http
-POST /api/autograde/grade
-Content-Type: application/json
-
-{
-  "submission_id": "SUB001",
-  "student_id": "ST001",
-  "topic": "Basic Electrical Wiring",
-  "closed_ended_questions": [
+  "student_id": "student_123",
+  "modules": [
     {
-      "question_id": "Q1",
-      "question_text": "What is the standard residential voltage?",
-      "question_type": "mcq",
-      "correct_answer": "C",
-      "student_answer": "C",
-      "points": 5
-    }
-  ],
-  "open_ended_questions": [
-    {
-      "question_id": "Q2",
-      "question_text": "Explain series vs parallel circuits",
-      "question_type": "short_answer",
-      "rubric": "Should explain current flow and component arrangement",
-      "student_answer": "In series, current flows through each component...",
-      "points": 10,
-      "keywords": ["series", "parallel", "current"]
+      "module_id": "safety_101",
+      "module_name": "Electrical Safety",
+      "module_content": "Working with electricity requires strict adherence...",
+      "max_score": 25,
+      "question_results": [
+        {
+          "question_text": "What is LOTO?",
+          "student_answer": "Lockout Tagout",
+          "correct_answer": "Lockout/Tagout - ensures energy sources are isolated",
+          "awarded_marks": 4,
+          "max_marks": 5,
+          "question_type": "short_answer",
+          "is_correct": true
+        }
+      ]
     }
   ]
 }
 ```
 
-**Batch Grade**
-```http
-POST /api/autograde/grade-batch
-Content-Type: application/json
+**Response**: Individual module reviews + collective feedback with specific study recommendations
 
-[
-  { submission_1 },
-  { submission_2 },
-  ...
-]
-```
-
-#### 3. Quiz Generation System
-
-**Quick Generate (Easiest)**
-```http
-POST /api/quiz/quick-generate?topic=Basic%20Wiring&difficulty=intermediate
-```
-
-**Standard Generation**
-```http
-POST /api/quiz/generate
-Content-Type: application/json
-
-{
-  "topic": "Basic Electrical Wiring",
-  "subtopics": ["Circuit Breakers", "Wire Gauges"],
-  "difficulty_level": "intermediate",
-  "num_mcq": 5,
-  "num_true_false": 3,
-  "num_short_answer": 2,
-  "num_essay": 0
-}
-```
-
-**Adaptive Quiz**
-```http
-POST /api/quiz/generate-adaptive
-Content-Type: application/json
-
-{
-  "student_id": "ST001",
-  "topic": "Pipe Fitting",
-  "total_questions": 10,
-  "recent_performance": {
-    "Pipe Fitting": 55
-  },
-  "weak_areas": ["Pipe Threading", "Leak Detection"]
-}
-```
-
-**Bulk Generation**
-```http
-POST /api/quiz/generate-bulk
-Content-Type: application/json
-
-{
-  "topics": ["Basic Wiring", "Plumbing Basics", "Safety Procedures"],
-  "questions_per_topic": 10
-}
-```
+**Use Case**: Get personalized learning recommendations after quiz completion
 
 ---
 
 ##  Usage Examples
 
-### Example 1: Complete Learning Cycle
+### Complete Learning Workflow
 
 ```bash
-# Step 1: Generate a quiz
-curl -X POST "http://localhost:8000/api/quiz/quick-generate?topic=Basic%20Wiring&difficulty=beginner"
+# 1. Generate Quiz from Content
+curl -X POST http://localhost:8000/api/v1/quiz/generate-weekly \
+  -H "Content-Type: application/json" \
+  -d '{
+    "combined_content": "Your module content here...",
+    "difficulty_level": "intermediate",
+    "num_mcq": 5,
+    "num_true_false": 3,
+    "num_short_answer": 2
+  }'
 
-# Step 2: Student takes quiz (frontend handles this)
+# 2. Student Takes Quiz (Frontend handles this)
 
-# Step 3: Grade the submission
-curl -X POST http://localhost:8000/api/autograde/grade \
+# 3. Grade Submission
+curl -X POST http://localhost:8000/api/v1/grading/grade \
   -H "Content-Type: application/json" \
   -d @submission.json
 
-# Step 4: Get recommendations based on performance
-curl -X POST http://localhost:8000/api/recommendation/analyze \
+# 4. Get Personalized Recommendations
+curl -X POST http://localhost:8000/api/v1/recommendations/analyze \
   -H "Content-Type: application/json" \
-  -d @performance.json
-
-# Step 5: Generate adaptive quiz for weak areas
-curl -X POST http://localhost:8000/api/quiz/generate-adaptive \
-  -H "Content-Type: application/json" \
-  -d @adaptive_request.json
+  -d @recommendation_request.json
 ```
 
-### Example 2: Batch Processing (Entire Class)
+### Python Client Example
 
-```bash
-# Grade all student submissions
-curl -X POST http://localhost:8000/api/autograde/grade-batch \
-  -H "Content-Type: application/json" \
-  -d @class_submissions.json
+```python
+import httpx
+import asyncio
 
-# Generate quizzes for all course topics
-curl -X POST http://localhost:8000/api/quiz/generate-bulk \
-  -H "Content-Type: application/json" \
-  -d '{
-    "topics": ["Wiring", "Plumbing", "Safety", "Tools"],
-    "questions_per_topic": 10
-  }'
-```
+async def complete_assessment_cycle():
+    base_url = "http://localhost:8000/api/v1"
+    
+    async with httpx.AsyncClient() as client:
+        # 1. Generate Quiz
+        quiz_response = await client.post(
+            f"{base_url}/quiz/generate-weekly",
+            json={
+                "combined_content": "Module content...",
+                "difficulty_level": "intermediate",
+                "num_mcq": 5,
+                "num_true_false": 3,
+                "num_short_answer": 2
+            }
+        )
+        quiz_data = quiz_response.json()
+        
+        # 2. Student submits answers (simulated)
+        student_answers = {
+            "mcq_0": "B",
+            "tf_0": "true",
+            "sa_0": "My answer..."
+        }
+        
+        # 3. Grade submission
+        grading_response = await client.post(
+            f"{base_url}/grading/grade",
+            json={
+                "submission_id": "sub_001",
+                "student_id": "student_123",
+                "quiz_data": quiz_data,
+                "student_answers": student_answers
+            }
+        )
+        grading_result = grading_response.json()
+        
+        # 4. Get recommendations
+        recommendation_response = await client.post(
+            f"{base_url}/recommendations/analyze",
+            json={
+                "student_id": "student_123",
+                "modules": [{
+                    "module_id": "mod_001",
+                    "module_name": "Electrical Safety",
+                    "module_content": "Full content...",
+                    "max_score": 31,
+                    "question_results": [...]
+                }]
+            }
+        )
+        recommendations = recommendation_response.json()
+        
+        return {
+            "quiz": quiz_data,
+            "grading": grading_result,
+            "recommendations": recommendations
+        }
 
-### Example 3: Progress Tracking
-
-```bash
-# Week 1: Baseline assessment
-curl -X POST http://localhost:8000/api/recommendation/analyze \
-  -H "Content-Type: application/json" \
-  -d @week1_performance.json
-
-# Week 4: Track improvement
-curl -X POST http://localhost:8000/api/recommendation/track-improvement \
-  -H "Content-Type: application/json" \
-  -d '{
-    "student_id": "ST001",
-    "current_metrics": {"Basic Wiring": 0.85},
-    "previous_metrics": {"Basic Wiring": 0.65}
-  }'
+# Run
+results = asyncio.run(complete_assessment_cycle())
 ```
 
 ---
@@ -454,9 +594,9 @@ curl -X POST http://localhost:8000/api/recommendation/track-improvement \
 
 ### Spring Boot Integration
 
-#### Step 1: Add WebClient Dependency
+#### 1. Add Dependencies
 
-**Maven (pom.xml):**
+**Maven (pom.xml)**:
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -464,113 +604,92 @@ curl -X POST http://localhost:8000/api/recommendation/track-improvement \
 </dependency>
 ```
 
-**Gradle (build.gradle):**
-```gradle
-implementation 'org.springframework.boot:spring-boot-starter-webflux'
-```
-
-#### Step 2: Configure AI Service Client
+#### 2. Configure WebClient
 
 ```java
 @Configuration
 public class AIServiceConfig {
     
-    @Value("${ai-service.base-url}")
+    @Value("${ai.service.base-url:http://localhost:8000}")
     private String baseUrl;
     
     @Bean
     public WebClient aiServiceClient() {
         return WebClient.builder()
-            .baseUrl(baseUrl)
+            .baseUrl(baseUrl + "/api/v1")
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .build();
     }
 }
 ```
 
-#### Step 3: Create Service Class
+#### 3. Create Service Class
 
 ```java
 @Service
 @Slf4j
-public class AILearningService {
+public class VocaLearnAIService {
     
     private final WebClient aiClient;
     
-    public AILearningService(WebClient aiServiceClient) {
+    public VocaLearnAIService(WebClient aiServiceClient) {
         this.aiClient = aiServiceClient;
     }
     
-    // Recommendation Service
-    public Mono<RecommendationResponse> getRecommendations(
-        List<PerformanceRecord> performanceHistory
-    ) {
+    // Quiz Generation
+    public Mono<QuizResponse> generateQuiz(QuizRequest request) {
         return aiClient.post()
-            .uri("/api/recommendation/analyze")
-            .bodyValue(Map.of(
-                "performance_history", performanceHistory,
-                "topic_scores", Map.of()
-            ))
+            .uri("/quiz/generate-weekly")
+            .bodyValue(request)
             .retrieve()
-            .bodyToMono(RecommendationResponse.class)
+            .bodyToMono(QuizResponse.class)
             .timeout(Duration.ofSeconds(30))
-            .retry(2)
-            .doOnError(e -> log.error("Recommendation service error: {}", e.getMessage()));
+            .retry(2);
     }
     
-    // Grading Service
+    // Grading
     public Mono<GradingResult> gradeSubmission(GradingRequest request) {
         return aiClient.post()
-            .uri("/api/autograde/grade")
+            .uri("/grading/grade")
             .bodyValue(request)
             .retrieve()
             .bodyToMono(GradingResult.class)
-            .timeout(Duration.ofSeconds(45))
-            .retry(2);
+            .timeout(Duration.ofSeconds(45));
     }
     
-    // Quiz Generation Service
-    public Mono<QuizResult> generateQuiz(QuizRequest request) {
+    // Recommendations
+    public Mono<RecommendationResponse> getRecommendations(
+        RecommendationRequest request
+    ) {
         return aiClient.post()
-            .uri("/api/quiz/generate")
+            .uri("/recommendations/analyze")
             .bodyValue(request)
             .retrieve()
-            .bodyToMono(QuizResult.class)
-            .timeout(Duration.ofSeconds(30))
-            .retry(2);
+            .bodyToMono(RecommendationResponse.class)
+            .timeout(Duration.ofSeconds(30));
     }
 }
 ```
 
-#### Step 4: Application Properties
-
-**application.yml:**
-```yaml
-ai-service:
-  base-url: http://localhost:8000
-  timeout: 30s
-  retry:
-    max-attempts: 3
-    backoff: 2s
-```
-
-#### Step 5: Controller Example
+#### 4. Controller Example
 
 ```java
 @RestController
-@RequestMapping("/api/student")
-public class StudentController {
+@RequestMapping("/api/assessments")
+public class AssessmentController {
     
-    private final AILearningService aiService;
+    private final VocaLearnAIService aiService;
     
-    @PostMapping("/{id}/recommendations")
-    public Mono<ResponseEntity<RecommendationResponse>> getRecommendations(
-        @PathVariable String id,
-        @RequestBody List<PerformanceRecord> history
+    @PostMapping("/generate-quiz")
+    public Mono<ResponseEntity<QuizResponse>> generateQuiz(
+        @RequestBody QuizRequest request
     ) {
-        return aiService.getRecommendations(history)
+        return aiService.generateQuiz(request)
             .map(ResponseEntity::ok)
-            .defaultIfEmpty(ResponseEntity.notFound().build());
+            .onErrorResume(e -> {
+                log.error("Quiz generation failed", e);
+                return Mono.just(ResponseEntity.status(500).build());
+            });
     }
     
     @PostMapping("/submissions/{id}/grade")
@@ -582,11 +701,12 @@ public class StudentController {
             .map(ResponseEntity::ok);
     }
     
-    @PostMapping("/quiz/generate")
-    public Mono<ResponseEntity<QuizResult>> generateQuiz(
-        @RequestBody QuizRequest request
+    @PostMapping("/students/{id}/recommendations")
+    public Mono<ResponseEntity<RecommendationResponse>> getRecommendations(
+        @PathVariable String id,
+        @RequestBody RecommendationRequest request
     ) {
-        return aiService.generateQuiz(request)
+        return aiService.getRecommendations(request)
             .map(ResponseEntity::ok);
     }
 }
@@ -596,263 +716,98 @@ public class StudentController {
 
 ##  Testing
 
-### Manual Testing with cURL
-
-#### Test Recommendation System
-```bash
-curl -X POST http://localhost:8000/api/recommendation/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "performance_history": [
-      {"topic": "Basic Wiring", "score": 85, "max_score": 100},
-      {"topic": "Pipe Fitting", "score": 55, "max_score": 100}
-    ],
-    "topic_scores": {}
-  }' | jq
-```
-
-#### Test Auto-Grading
-```bash
-curl -X POST http://localhost:8000/api/autograde/grade \
-  -H "Content-Type: application/json" \
-  -d '{
-    "submission_id": "TEST001",
-    "student_id": "ST001",
-    "topic": "Basic Wiring",
-    "closed_ended_questions": [
-      {
-        "question_id": "Q1",
-        "question_text": "Test question",
-        "question_type": "mcq",
-        "correct_answer": "A",
-        "student_answer": "A",
-        "points": 5
-      }
-    ],
-    "open_ended_questions": []
-  }' | jq
-```
-
-#### Test Quiz Generation
-```bash
-curl -X POST "http://localhost:8000/api/quiz/quick-generate?topic=Basic%20Wiring&difficulty=intermediate" | jq
-```
-
-### Using Postman
-
-1. Import the API collection from `/docs/postman_collection.json`
-2. Set environment variable: `base_url = http://localhost:8000`
-3. Run the collection tests
-
 ### Health Checks
 
 ```bash
-# Overall health
+# Overall system health
 curl http://localhost:8000/health
 
 # Service-specific health
-curl http://localhost:8000/api/recommendation/health
-curl http://localhost:8000/api/autograde/health
-curl http://localhost:8000/api/quiz/health
+curl http://localhost:8000/api/v1/recommendations/health
+curl http://localhost:8000/api/v1/grading/health
+curl http://localhost:8000/api/v1/quiz/health
 ```
+
+### Test Quiz Generation
+
+```bash
+curl -X POST http://localhost:8000/api/v1/quiz/generate-weekly \
+  -H "Content-Type: application/json" \
+  -d '{
+    "combined_content": "Test content about electrical safety",
+    "difficulty_level": "beginner",
+    "num_mcq": 2,
+    "num_true_false": 1,
+    "num_short_answer": 1
+  }' | jq
+```
+
+### Test Grading
+
+See test payload in `/docs` → POST `/api/v1/grading/grade` → "Try it out"
+
+### Test Recommendations
+
+See test payload in `/docs` → POST `/api/v1/recommendations/analyze` → "Try it out"
 
 ---
 
 ##  Troubleshooting
 
-### Common Issues and Solutions
-
-#### Issue 1: Server won't start - "No module named uvicorn"
-
-**Problem**: Virtual environment not activated or dependencies not installed
+### Issue: "GROQAPI_KEY not found"
 
 **Solution**:
 ```bash
-# Activate virtual environment
-source .venv/bin/activate  # Linux/macOS
-.venv\Scripts\activate     # Windows
-
-# Reinstall dependencies
-pip install -r requirements.txt
-```
-
-#### Issue 2: "Missing GROQAPI_KEY"
-
-**Problem**: Environment variable not set
-
-**Solution**:
-```bash
-# Check if .env file exists
+# Check .env file exists
 ls -la | grep .env
 
-# Verify API key is set
+# Verify key is set
 cat .env | grep GROQAPI_KEY
 
-# If missing, add to .env file
+# Add if missing
 echo "GROQAPI_KEY=your_key_here" >> .env
 
 # Restart server
 ```
 
-#### Issue 3: Getting fallback messages instead of LLM responses
-
-**Problem**: Groq API not accessible or rate limited
-
-**Solution**:
-```bash
-# Test Groq API connectivity
-curl https://api.groq.com/openai/v1/models \
-  -H "Authorization: Bearer your_api_key"
-
-# Check server logs for detailed error
-# Look for "LLM generation failed: ..." messages
-
-# Verify API key has credits (Groq offers free tier)
-# Visit https://console.groq.com/
-```
-
-#### Issue 4: "PydanticSchemaGenerationError: Unable to generate schema for <built-in function any>"
-
-**Problem**: Type hint using lowercase `any` instead of `Any`
-
-**Solution**:
-```python
-# In model files, change:
-from typing import List, Dict, Optional, Any  # Add Any
-
-# Change any lowercase 'any' to 'Any':
-generation_metadata: Dict[str, Any]  # Not 'any'
-```
-
-#### Issue 5: Import errors or module not found
-
-**Problem**: File structure or naming mismatch
-
-**Solution**:
-```bash
-# Verify project structure
-tree app/
-
-# Should look like:
-# app/
-# ├── __init__.py
-# ├── main.py
-# ├── api/
-# │   ├── __init__.py
-# │   └── v1/
-# │       ├── __init__.py
-# │       ├── recommendation_router.py
-# │       ├── grading_router.py
-# │       └── quiz_router.py
-# ├── models/
-# │   ├── __init__.py
-# │   ├── recommendation_models.py
-# │   ├── grading_models.py
-# │   └── quiz_models.py
-# └── services/
-#     ├── __init__.py
-#     ├── recommendation_service.py
-#     ├── grading_service.py
-#     └── quiz_service.py
-
-# Ensure all __init__.py files exist
-find app -type d -exec touch {}/__init__.py \;
-```
-
-#### Issue 6: CORS errors when calling from frontend
-
-**Problem**: CORS not properly configured
-
-**Solution**:
-```python
-# In app/main.py, update CORS middleware:
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Or specify your frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-#### Issue 7: Slow response times
-
-**Problem**: Network latency or LLM processing
+### Issue: LLM responses are slow
 
 **Solutions**:
-- Use `llama-3.1-8b-instant` model (fastest)
-- Implement caching for repeated requests
-- Use batch endpoints for multiple operations
-- Consider async processing for heavy workloads
+- Use `llama-3.1-8b-instant` for faster responses
+- Check Groq API status: https://status.groq.com/
+- Implement request caching for repeated content
+- Consider batch processing for multiple requests
 
-### Getting Help
+### Issue: Grading falls back to keywords
 
-If you encounter issues not covered here:
+**Cause**: Groq API unreachable or rate limited
 
-1. Check server logs for detailed error messages
-2. Review the [API Documentation](http://localhost:8000/docs)
-3. Open an issue on GitHub with:
-   - Error message and stack trace
-   - Steps to reproduce
-   - System information (OS, Python version)
-   - Contents of `.env` file (without API key)
+**Solution**:
+```bash
+# Test Groq connectivity
+curl https://api.groq.com/openai/v1/models \
+  -H "Authorization: Bearer $GROQAPI_KEY"
 
----
+# Check API usage: https://console.groq.com/
+```
 
-##  Performance Metrics
+### Issue: Recommendation output has section references
 
-### Expected Response Times
+**Solution**: This is fixed in the latest version. If you see section references like "(section 3.2)", update to the latest code from artifacts #2 and #3.
 
-| Operation | Response Time | Notes |
-|-----------|--------------|-------|
-| MCQ/T-F Grading | < 100ms | Per question, deterministic |
-| Open-ended Grading | 3-5 seconds | Per question, LLM-powered |
-| Recommendation Analysis | 2-3 seconds | Depends on history size |
-| Quiz Generation (10 questions) | 10-15 seconds | LLM generation |
-| Quick Quiz Generate | 8-12 seconds | Default configuration |
+### Issue: Import errors
 
-### Scalability
+**Solution**:
+```bash
+# Verify structure
+tree app/
 
-- **Concurrent Requests**: Handles 100+ simultaneous requests
-- **Batch Processing**: Grade 50+ submissions in under 3 minutes
-- **Rate Limits**: Respects Groq's free tier limits (flexible)
+# Ensure all __init__.py exist
+find app -type d -exec touch {}/__init__.py \;
 
----
-
-##   Security Considerations
-
-### Production Deployment
-
-1. **API Key Management**
-   - Never commit `.env` file to version control
-   - Use environment variables or secret management services
-   - Rotate API keys regularly
-
-2. **CORS Configuration**
-   ```python
-   # Restrict origins in production
-   allow_origins=["https://your-frontend-domain.com"]
-   ```
-
-3. **Rate Limiting**
-   ```python
-   from slowapi import Limiter, _rate_limit_exceeded_handler
-   
-   limiter = Limiter(key_func=get_remote_address)
-   
-   @limiter.limit("10/minute")
-   async def generate_quiz(...):
-       ...
-   ```
-
-4. **Input Validation**
-   - Pydantic models already validate inputs
-   - Add custom validators for business logic
-
-5. **Logging**
-   - Enable structured logging in production
-   - Monitor for suspicious patterns
-   - Set up alerts for errors
+# Reinstall dependencies
+pip install -r requirements.txt --force-reinstall
+```
 
 ---
 
@@ -860,131 +815,148 @@ If you encounter issues not covered here:
 
 ### Docker Deployment
 
-**Dockerfile:**
+**Dockerfile**:
 ```dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application
 COPY . .
 
+# Expose port
+EXPOSE 8000
+
+# Run application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-**Build and Run:**
-```bash
-docker build -t vocalearn-ai .
-docker run -d -p 8000:8000 --env-file .env vocalearn-ai
+**docker-compose.yml**:
+```yaml
+version: '3.8'
+
+services:
+  vocalearn-ai:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQAPI_KEY=${GROQAPI_KEY}
+      - ENV=production
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
 ```
 
-### Cloud Deployment (AWS, GCP, Azure)
+**Deploy**:
+```bash
+docker-compose up -d
+```
 
-**Requirements:**
-- Load balancer for scaling
-- Environment variables configured
+### Cloud Deployment (AWS/GCP/Azure)
+
+**Requirements**:
+- Load balancer for horizontal scaling
+- Environment variables configured securely
 - Health check endpoint: `/health`
-- Min 2GB RAM per instance
+- Minimum 2GB RAM per instance
+- Auto-scaling based on request rate
 
 ---
 
-## Monitoring
+## Performance Metrics
 
-### Key Metrics to Track
+| Operation | Response Time | Notes |
+|-----------|---------------|-------|
+| Quiz Generation (10 questions) | 10-15s | LLM generation |
+| MCQ/T-F Grading (per question) | < 100ms | Deterministic |
+| Open-ended Grading (per question) | 3-5s | LLM evaluation |
+| Recommendation Analysis | 2-3s | Depends on data size |
+| Health Check | < 50ms | No external calls |
 
-- Request latency (p50, p95, p99)
-- Error rates by endpoint
-- LLM API call success rate
-- Queue depth (if using async processing)
-- Memory and CPU usage
-
-### Recommended Tools
-
-- **Prometheus + Grafana**: Metrics visualization
-- **ELK Stack**: Log aggregation
-- **Sentry**: Error tracking
-- **DataDog**: All-in-one monitoring
+**Throughput**:
+- Concurrent requests: 100+
+- Quiz generation: 6-8 per minute
+- Grading: 50+ submissions per minute
 
 ---
 
-## Contributing
+##  Contributing
 
-We welcome contributions! Here's how you can help:
+We welcome contributions!
 
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make your changes**
-4. **Write tests** for new functionality
-5. **Commit your changes**: `git commit -m 'Add amazing feature'`
-6. **Push to branch**: `git push origin feature/amazing-feature`
-7. **Open a Pull Request**
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes and add tests
+4. Commit: `git commit -m 'Add amazing feature'`
+5. Push: `git push origin feature/amazing-feature`
+6. Open Pull Request
 
-### Development Guidelines
-
-- Follow PEP 8 style guide
-- Add docstrings to all functions
-- Write unit tests for new features
-- Update documentation as needed
+**Development Guidelines**:
+- Follow PEP 8
+- Add docstrings
+- Write unit tests
+- Update documentation
 
 ---
 
-## License
+##  License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
 ---
 
 ##  Authors
 
 **VocaLearn Development Team**
-- Backend AI Services: Brian Yegon
-- Integration Support: Meshllam Mwai, Solomon Ndimu
+- AI Services: Brian Yegon
+- Integration: Meshllam Mwai, Solomon Ndimu
 
 ---
 
-## Acknowledgments
+##  Acknowledgments
 
-- **Groq** for providing fast LLM inference
-- **FastAPI** for the excellent web framework
-- **Meta** for Llama 3.1 model
-- **Pydantic** for data validation
+- **Groq** - Fast LLM inference
+- **Meta** - Llama 3.1 & 3.3 models
+- **FastAPI** - Modern web framework
+- **Pydantic** - Data validation
 - All contributors and testers
 
 ---
 
 ## Support
 
-- **Email**: support@vocallearn.edu
-- **Documentation**: [https://docs.vocallearn.edu](https://docs.vocallearn.edu)
+- **Email**: bultutyegonn@gmail.com
 - **GitHub Issues**: [Report a bug](https://github.com/your-org/vocalearn_ai/issues)
-- **Slack Community**: [Join us](https://vocallearn.slack.com)
 
 ---
 
-## Roadmap
+##  Roadmap
 
 ### Q1 2025
+- [ ] Support for image-based questions
 - [ ] Multi-language support
-- [ ] Custom Hugging Face model integration
-- [ ] Image-based question generation
-- [ ] Video assessment grading
+- [ ] Enhanced analytics dashboard
+- [ ] Batch recommendation processing
 
 ### Q2 2025
-- [ ] Real-time collaboration features
-- [ ] Advanced analytics dashboard
+- [ ] Video-based assessments
+- [ ] Real-time collaboration
 - [ ] Mobile app support
-- [ ] Offline mode capability
+- [ ] Offline mode
 
 ### Q3 2025
-- [ ] Voice-based assessments
-- [ ] AR/VR integration for practical skills
-- [ ] Blockchain-based certification
+- [ ] Voice assessments
+- [ ] AR/VR practical skill evaluation
+- [ ] Advanced plagiarism detection
 - [ ] Peer review system
 
 ---
 
-**Made with Love for TVET Education**
+**Made with  for TVET Education**
 
 *Empowering trades education through intelligent automation*
