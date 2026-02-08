@@ -86,7 +86,7 @@ A comprehensive suite of AI services designed to revolutionize Technical and Voc
                             ▼
               ┌──────────────────────────┐
               │   Spring Boot Backend    │
-              │   (Your LMS Backend)     │
+              │        (LMS Backend)     │
               └──────────────────────────┘
 ```
 
